@@ -1,0 +1,1681 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TMO UNIFESP">
+<meta name="theme-color" content="#007AFF">
+<link rel="apple-touch-icon" href="./icon.png">
+<link rel="icon" type="image/png" href="./icon.png">
+<link rel="manifest" href="manifest.json">
+<title>TMO UNIFESP</title>
+<style>
+*{-webkit-tap-highlight-color:transparent;box-sizing:border-box;margin:0;padding:0}
+html,body,#root{height:100%;height:100dvh;overflow:hidden}
+body{background:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,sans-serif}
+input,button{-webkit-appearance:none;font-family:inherit}
+::-webkit-scrollbar{display:none}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+if('serviceWorker' in navigator)
+  window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<script type="text/babel">
+const {useState,useMemo}=React;
+
+const CAT={
+  "Alogênico":        {color:"#007AFF",icon:"🔬"},
+  "Autólogo":         {color:"#5856D6",icon:"💉"},
+  "Condicionamentos": {color:"#00BCD4",icon:"🧬"},
+  "Profilaxias":      {color:"#34C759",icon:"🛡️"},
+  "CMV":              {color:"#FF3B30",icon:"🦠"},
+  "Seguimento":       {color:"#FF9500",icon:"📅"},
+};
+
+const s={
+  page: {background:"#F2F2F7",minHeight:"100%",paddingBottom:24},
+  card: {background:"#fff",borderRadius:12,overflow:"hidden",marginBottom:10,boxShadow:"0 1px 3px rgba(0,0,0,0.07)"},
+  row:  {padding:"12px 16px",display:"flex",alignItems:"center",gap:10},
+  lbl:  {fontSize:12,fontWeight:600,color:"#8E8E93",textTransform:"uppercase",letterSpacing:0.5,marginBottom:8,paddingLeft:4},
+};
+
+/* ═══════ PROTOCOLS DATA ═══════ */
+const DATA=[
+
+{id:"protocolo-enfermaria",title:"Protocolo da Enfermaria — Completo",cat:"Alogênico",
+ tags:["enfermaria","protocolo","admissão","alta","exames","doador","paciente","pré-TMO","rotina","checklist"],
+ sections:[
+  {type:"link",title:"📄 Protocolo completo (Google Docs)",url:"https://docs.google.com/document/d/1qY_hRpG_t9cZpE3eM_juFlalpEzddWzxAa4Ajn6yo3o/edit?usp=sharing"},
+  {type:"list",title:"Pré-TMO Doador",items:[
+    "HLA + confirmatório (IGen) · Tipagem ABO/RH · Anti-A/B se incompat. · PAI · Prova cruzada",
+    "Sorologias + NAT (Hemocentro) — até 30 dias antes",
+    "Hemograma · Creatinina · TGO · Gama-GT · BT · Glicemia · Beta HCG (se fértil)\nantiHBs · Ferro · Ferritina · Sat. transferrina · CMV · Toxo · EBV IgG/IgM",
+    "Coleta periférica: avaliação rede venosa + programar G-CSF",
+    "Coleta cirúrgica: bolsa autóloga Hemocentro (mín 1sem/máx 4sem) + avaliação anestésica + TCLE",
+  ]},
+  {type:"list",title:"Pré-TMO Paciente",items:[
+    "HLA + confirmatório · Anti-HLA se mismatch · REREME se sem doador aparentado",
+    "Tipagem ABO/RH · Anti-A/B se incompat. · PAI · Prova cruzada",
+    "Sorologias (Hemocentro) — até 30 dias antes",
+    "Hemograma · Ureia · Creatinina · Na · K · Mg · TGO · Gama GT · BT · Glicemia · Beta HCG (se fértil)\nFerritina · Sat. transferrina · Vit D · antiHBs · CMV · Toxo · EBV IgG/IgM",
+    "PFP · Ecodoppler · Programação TBI · Odonto · Nutrição · Gineco (se mulher) · TCLE",
+    "Leucemias agudas: mielograma · IF · biologia molecular. LCR+IF se SNC",
+    "Linfomas: PET-CT <30 dias (alternativa: TCs)",
+  ]},
+  {type:"list",title:"Admissão — Checklist",items:[
+    "✅ Checar todos os exames pré-TMO e estadiamento",
+    "✅ Acesso venoso: cateter duplo lúmen ou PICC",
+    "✅ Ivermectina 200 mcg/kg — dose única",
+    "✅ Profilaxia antifúngica (neutrófilos <500):\n   • Baixo risco: Fluconazol 300mg/d\n   • Alto risco: Voriconazol 200mg 12/12h ou Isavuconazol 200mg 8/8h (×6) → 200mg/d",
+    "✅ Profilaxia viral: Aciclovir 400mg/d",
+    "✅ Profilaxia PCP: Bactrim 800/160mg (2ª, 4ª, 6ª) — suspender no D-2",
+    "✅ Indução de amenorréia (mulheres): Lupron / Zoladex",
+    "✅ Protocolo antiemético · Condicionamento conforme protocolo",
+    "✅ Se AUC bussulfano: contato HIAE · Agendamento CC se MO · GRAACC se criopreservação",
+    "✅ Radioterapia: quando TBI no condicionamento",
+  ]},
+  {type:"list",title:"Imunossupressão — COM CyPT",items:[
+    "D+5: Sirolimus 4mg/d VO (1ª opção)",
+    "D+5: MMF 1000mg VO 12/12h",
+    "Alternativa ao Sirolimus: CsA 2,5mg/kg VO 12/12h → adicionar MgO 500mg VO 8/8h",
+    "Hidratação venosa nos dias de Ciclofosfamida (D+3 e D+4)",
+  ]},
+  {type:"list",title:"Imunossupressão — SEM CyPT",items:[
+    "D-3: Sirolimus 4mg/d VO (1ª opção)",
+    "Alternativa ao Sirolimus: CsA 2,5mg/kg VO 12/12h a partir do D-3",
+    "D+1: MMF 1000mg VO 12/12h",
+  ]},
+  {type:"info",text:"Transfusão: Plaquetas <10.000 · CH: avaliar sintomas"},
+  {type:"list",title:"Antes da Alta",items:[
+    "Retirada do voriconazol (pacientes alto risco)",
+    "Solicitar LME para Sirolimus/CsA e MMF · Receita MgO (se CsA)",
+    "Agendar retornos: coleta de exames, consultas e transfusões",
+  ]},
+  {type:"table",title:"Dias Mínimos de Internação",headers:["Tipo de TCTH","Mínimo"],rows:[
+    ["Autólogo","5 dias"],["Alo AP (SP)","14 dias"],["Alo AP (MO)","16 dias"],
+    ["Alo NAP (SP)","16 dias"],["Alo NAP (MO)","19 dias"],["Cordão","19 dias"],
+  ]},
+  {type:"table",title:"Coleta de Exames por Dia",headers:["2ª Feira","3ª Feira","5ª Feira"],rows:[
+    ["Hemograma","Swab vigilância","Hemograma"],
+    ["Creatinina","","Creatinina"],
+    ["Na · K · Mg","","Na · K · Mg"],
+    ["TGO · BT · Gama GT","","TGO · BT · Gama GT"],
+    ["PCR · PCR CMV","","PCR · PCR CMV"],
+    ["Nível Sirolimus / CsA","","Nível Sirolimus / CsA"],
+    ["Galactomanana*","","Galactomanana*"],
+  ]},
+  {type:"list",title:"Observações — Exames",items:[
+    "* Galactomanana: apenas sem profilaxia antifúngica",
+    "1º nível Sirolimus: pré 5ª dose → Alvo 5–15 ng/mL",
+    "1º nível CsA: pré 5ª dose → Alvo 200–400 ng/mL",
+    "1º PCR CMV: a partir do D+15 · Hemograma diário: aplasia até enxertia",
+  ]},
+]},
+
+{id:"orientacao-paciente",title:"Orientação ao Paciente — Pré-TMO",cat:"Alogênico",
+ tags:["paciente","orientação","vídeo","pré-TMO","educação"],
+ sections:[
+  {type:"info",text:"Vídeo de orientação para pacientes e familiares sobre o Transplante de Medula Óssea na UNIFESP."},
+  {type:"video",title:"Vídeo de Orientação Pré-TMO",url:"https://drive.google.com/file/d/1hFEwJvf-uqsK6gynEzAWmNwUctKDmaV3/view?usp=share_link"},
+]},
+
+{id:"alo-doador",title:"Pré-TCTH — Doador",cat:"Alogênico",
+ tags:["doador","HLA","sorologias","pré-TMO","IGen","NAT"],
+ sections:[
+  {type:"list",title:"Exames e Avaliações",items:[
+    "HLA + HLA confirmatório (IGen): 1 alta resolução + 1 média resolução",
+    "Tipagem ABO e RH (Hemocentro) · Anti-A/B se incompat. menor ou bidirecional · PAI · Prova cruzada",
+    "Sorologias + NAT (Hemocentro) — até 30 dias antes da infusão",
+    "Hemograma · Creatinina · TGO · Gama-GT · BT · Glicemia · Beta HCG (se fértil)\nantiHBs · Ferro · Ferritina · Sat. transferrina · CMV IgG/IgM · Toxo IgG/IgM · EBV IgG/IgM",
+    "Coleta periférica: avaliação rede venosa + programar G-CSF e mobilização",
+    "Coleta cirúrgica: bolsa autóloga Hemocentro (mín 1sem/máx 4sem) + avaliação anestésica + TCLE",
+  ]},
+]},
+
+{id:"alo-paciente",title:"Pré-TCTH — Paciente",cat:"Alogênico",
+ tags:["paciente","HLA","sorologias","pré-TMO","REREME"],
+ sections:[
+  {type:"list",title:"Exames e Avaliações",items:[
+    "HLA + confirmatório · Anti-HLA (se mismatch) · REREME (sem doador aparentado)",
+    "Tipagem ABO/RH · Anti-A/B se incompat. maior ou bidirecional · PAI · Prova cruzada",
+    "Sorologias (Hemocentro) — até 30 dias antes",
+    "Hemograma · Ureia · Creatinina · Na · K · Mg · TGO · Gama GT · BT · Glicemia · Beta HCG (se fértil)\nFerritina · Sat. transferrina · Vit D · antiHBs · CMV · Toxo · EBV IgG/IgM",
+    "PFP · Ecodoppler · Programação TBI · Odonto · Nutrição · Gineco (se mulher) · TCLE",
+  ]},
+  {type:"list",title:"Avaliação da Doença de Base",items:[
+    "Leucemias agudas: mielograma · IF · biologia molecular (<2 semanas). LCR+IF se SNC",
+    "Linfomas: PET-CT <30 dias (alternativa: TCs)",
+  ]},
+]},
+
+{id:"alo-admissao",title:"Internação — Admissão",cat:"Alogênico",
+ tags:["internação","admissão","checklist","cateter","imunossupressão","bussulfano","CyPT"],
+ sections:[
+  {type:"list",title:"Checklist de Admissão",items:[
+    "✅ Checar todos os exames pré-TMO e estadiamento",
+    "✅ Acesso venoso: cateter duplo lúmen ou PICC",
+    "✅ Ivermectina 200 mcg/kg — dose única",
+    "✅ Profilaxia antifúngica (neutrófilos <500):\n   • Baixo risco: Fluconazol 300mg/d\n   • Alto risco: Voriconazol 200mg 12/12h ou Isavuconazol 200mg 8/8h (×6) → 200mg/d",
+    "✅ Profilaxia viral: Aciclovir 400mg/d",
+    "✅ Profilaxia PCP: Bactrim 800/160mg (2ª, 4ª, 6ª) — suspender no D-2",
+    "✅ Indução de amenorréia (mulheres): Lupron / Zoladex",
+    "✅ Protocolo antiemético · Condicionamento conforme protocolo",
+    "✅ Se AUC bussulfano: contato HIAE · Agendamento CC se MO · GRAACC se criopreservação",
+    "✅ Radioterapia: quando TBI no condicionamento",
+  ]},
+  {type:"list",title:"Imunossupressão — COM CyPT",items:[
+    "D+5: Sirolimus 4mg/d VO (1ª opção)",
+    "D+5: MMF 1000mg VO 12/12h",
+    "Alternativa ao Sirolimus: CsA 2,5mg/kg VO 12/12h → adicionar MgO 500mg VO 8/8h",
+    "Hidratação venosa nos dias de Ciclofosfamida (D+3 e D+4)",
+  ]},
+  {type:"list",title:"Imunossupressão — SEM CyPT",items:[
+    "D-3: Sirolimus 4mg/d VO (1ª opção)",
+    "Alternativa ao Sirolimus: CsA 2,5mg/kg VO 12/12h a partir do D-3",
+    "D+1: MMF 1000mg VO 12/12h",
+  ]},
+  {type:"info",text:"Transfusão: Plaquetas <10.000 · CH: avaliar sintomas"},
+]},
+
+{id:"alo-alta",title:"Internação — Antes da Alta",cat:"Alogênico",
+ tags:["alta","LME","dias mínimos","sirolimus"],
+ sections:[
+  {type:"list",title:"Medicamentos na Alta",items:[
+    "Retirada do voriconazol (pacientes alto risco)",
+    "Solicitar LME para Sirolimus/CsA e MMF · Receita MgO (se CsA)",
+    "Agendar retornos: coleta de exames, consultas e transfusões",
+  ]},
+  {type:"table",title:"Dias Mínimos de Internação",headers:["Tipo de TCTH","Mínimo"],rows:[
+    ["Autólogo","5 dias"],["Alo AP (SP)","14 dias"],["Alo AP (MO)","16 dias"],
+    ["Alo NAP (SP)","16 dias"],["Alo NAP (MO)","19 dias"],["Cordão","19 dias"],
+  ]},
+]},
+
+{id:"abo",title:"Incompatibilidade ABO",cat:"Alogênico",
+ tags:["ABO","deseritrocitar","plasma","aférese","anti-A","anti-B"],
+ sections:[
+  {type:"table",title:"Manejo por Tipo",headers:["Tipo","Manipulação da Fonte","Aférese (Receptor)"],rows:[
+    ["Maior\nAnti-A/B ≥1:128","SP: <30mL → não manipular\n>30mL → deseritrocitar\nMO: deseritrocitar","Troca plasmática ou imunoadsorção\nc/ plasma AB ou isogrupo do doador"],
+    ["Maior\nAnti-A/B ≤1:128","Não manipular","—"],
+    ["Menor\nDoador ≥1:256","SP ou MO: reduzir plasma","—"],
+    ["Menor\nDoador ≤1:128","SP ou MO: reduzir plasma","—"],
+    ["Bidirecional","SP: <30mL → não manipular\n>30mL → deseritrocitar\nMO: deseritrocitar\nSe doador ≥1:256: reduzir plasma","Troca plasmática com plasma\nA, B, AB ou albumina"],
+  ]},
+]},
+
+{id:"dech-profilaxia",title:"Profilaxia de DECH",cat:"Alogênico",
+ tags:["DECH","GvHD","profilaxia","PTCy","sirolimus","MMF","CsA","aparentado","haploidêntico","não aparentado","mismatch","ATG","benignas"],
+ sections:[
+  {type:"info",text:"PTCy: verificar dose conforme tipo de doador. Sempre associar MESNA."},
+  {type:"table",title:"Resumo PTCy + MESNA por Tipo de Doador",headers:["Doador","PTCy","MESNA (4 doses)"],rows:[
+    ["Aparentado HLA idêntico","25 mg/kg D+3 e D+4","6,25 mg/kg em 0h · 2h · 4h · 8h"],
+    ["Haploidêntico","40 mg/kg D+3 e D+4","10 mg/kg em 0h · 2h · 4h · 8h"],
+    ["Não aparentado HLA idêntico","40 mg/kg D+3 e D+4","10 mg/kg em 0h · 2h · 4h · 8h"],
+    ["Não aparentado HLA mismatch","40 mg/kg D+3 e D+4","10 mg/kg em 0h · 2h · 4h · 8h"],
+  ]},
+  {type:"list",title:"Aparentado HLA Idêntico — Neoplasias",items:[
+    "PTCy 25 mg/kg IV D+3 e D+4 + MESNA 25mg/kg/d",
+    "D+5: Sirolimus 4mg/d VO → manter até D+60",
+    "D+5: MMF 1000mg VO 12/12h → manter até D+30",
+    "G-CSF: uso opcional a partir do D+5",
+  ]},
+  {type:"list",title:"Haploidêntico — Neoplasias",items:[
+    "PTCy 40 mg/kg IV D+3 e D+4 + MESNA 40mg/kg/d",
+    "D+5: Sirolimus 4mg/d VO → manter até D+60",
+    "D+5: MMF 1000mg VO 12/12h → manter até D+30",
+    "G-CSF: uso opcional a partir do D+5",
+  ]},
+  {type:"list",title:"Não Aparentado HLA Idêntico — Neoplasias",items:[
+    "PTCy 40 mg/kg IV D+3 e D+4 + MESNA 40mg/kg/d",
+    "D+5: Sirolimus 4mg/d VO → manter até D+60",
+    "G-CSF: uso opcional a partir do D+5",
+  ]},
+  {type:"list",title:"Não Aparentado HLA Mismatch — Neoplasias",items:[
+    "PTCy 40 mg/kg IV D+3 e D+4 + MESNA 40mg/kg/d",
+    "D+5: Sirolimus 4mg/d VO → manter até D+60",
+    "D+5: MMF 1000mg VO 12/12h → manter até D+30",
+    "G-CSF: uso opcional a partir do D+5",
+  ]},
+  {type:"list",title:"Benignas (Anemia Aplásica)",items:[
+    "Seguir esquema correspondente ao tipo de doador",
+    "Associar ATG 4,5 mg/kg: D-9, D-8 e D-7",
+  ]},
+  {type:"list",title:"Observações Gerais",items:[
+    "Dose de Cy pode ser ajustada se disfunção cardíaca ou renal",
+    "Nível sérico Sirolimus: pré 5ª dose · Alvo: 5–15 ng/mL",
+    "Alternativa ao Sirolimus: CsA 2,5mg/kg VO 12/12h → Alvo: 200–400 ng/mL",
+    "Desmame da imunossupressão reavaliado caso a caso",
+  ]},
+]},
+
+{id:"imunossupressao",title:"Imunossupressão e DLI",cat:"Alogênico",
+ tags:["imunossupressão","sirolimus","MMF","CsA","DLI","GvHD","suspensão"],
+ sections:[
+  {type:"list",title:"Esquemas",items:[
+    "1ª opção: Sirolimus + MMF · Alvo Sirolimus: 5–15 ng/mL",
+    "Alternativa: CsA + MMF · Alvo CsA: 200–400 ng/mL",
+  ]},
+  {type:"list",title:"Suspensão (Sem GvHD)",items:[
+    "Micofenolato: D+30",
+    "Sirolimus — Oncológicos: D+30 a D+60",
+    "Sirolimus — Aplasia / Benignas: D+180",
+  ]},
+  {type:"list",title:"DLI — Exames Necessários",items:[
+    "HLA (doador e paciente) · Sorologias banco de sangue (<30 dias) · Tipagem ABO",
+  ]},
+]},
+
+{id:"quimerismo",title:"Quimerismo e DRM",cat:"Alogênico",
+ tags:["quimerismo","DRM","LMA","LLA","D+30","D+100"],
+ sections:[
+  {type:"list",title:"Quimerismo",items:["Na enxertia · D+100 · D+1 ano"]},
+  {type:"list",title:"DRM — LMA",items:["Apenas no D+30"]},
+  {type:"list",title:"DRM — LLA",items:["D+30 · D+60 · D+100"]},
+]},
+
+{id:"exames-rotina",title:"Exames Rotina — Internação",cat:"Alogênico",
+ tags:["exames","rotina","CMV","galactomanana","sirolimus","swab"],
+ sections:[
+  {type:"table",title:"Coleta Semanal",headers:["2ª Feira","3ª Feira","5ª Feira"],rows:[
+    ["Hemograma","Swab vigilância","Hemograma"],
+    ["Creatinina · Na · K · Mg","","Creatinina · Na · K · Mg"],
+    ["TGO · BT · Gama GT · PCR","","TGO · BT · Gama GT · PCR"],
+    ["PCR CMV · Nível Sirolimus/CsA","","PCR CMV · Nível Sirolimus/CsA"],
+    ["Galactomanana*","","Galactomanana*"],
+  ]},
+  {type:"list",title:"Observações",items:[
+    "* Galactomanana: apenas sem profilaxia antifúngica",
+    "1º nível Sirolimus: pré 5ª dose → Alvo 5–15 ng/mL",
+    "1º nível CsA: pré 5ª dose → Alvo 200–400 ng/mL",
+    "1º PCR CMV: a partir do D+15 · Hemograma diário: aplasia até enxertia",
+  ]},
+]},
+
+{id:"regimes-condicionamento",title:"Regimes de Condicionamento — Guia",cat:"Condicionamentos",
+ tags:["condicionamento","haploidêntico","aparentado","não aparentado","mismatch","RIC","MAC","LMA","LLA","mielofibrose","anemia aplástica","ATG","benignas"],
+ sections:[
+  {type:"info",text:"Guia de escolha do regime por tipo de doador e diagnóstico."},
+  {type:"table",title:"Haploidêntico — Neoplasias",headers:["Intensidade","Opção","Condicionamento","PTCy"],rows:[
+    ["RIC","1ª","FluCyTBI4Gy","40 mg/kg D+3/D+4"],
+    ["RIC","2ª","FluBu2 (±TBI4Gy)","40 mg/kg D+3/D+4"],
+    ["MAC","","FluBu3 (±TBI4Gy)","40 mg/kg D+3/D+4"],
+  ]},
+  {type:"table",title:"Não Aparentado (HLA idêntico e mismatch) — Neoplasias",headers:["Intensidade","Opção","Condicionamento","PTCy"],rows:[
+    ["RIC","1ª","FluCyTBI4Gy","40 mg/kg D+3/D+4"],
+    ["RIC","2ª","FluBu2","40 mg/kg D+3/D+4"],
+    ["MAC","","FluBu3 (±TBI4Gy)","40 mg/kg D+3/D+4"],
+  ]},
+  {type:"table",title:"Aparentado HLA Idêntico — Neoplasias",headers:["Intensidade","Opção","Condicionamento","PTCy"],rows:[
+    ["RIC","1ª","FluCyTBI4Gy","25 mg/kg D+3/D+4"],
+    ["RIC","2ª","FluBu2","25 mg/kg D+3/D+4"],
+    ["MAC","","FluBu3 (±TBI4Gy)","25 mg/kg D+3/D+4"],
+  ]},
+  {type:"table",title:"Benignas (Anemia Aplásica)",headers:["Doador","Condicionamento","PTCy","ATG"],rows:[
+    ["Haploidêntico","FluCyTBI4Gy","40 mg/kg D+3/D+4","4,5 mg/kg · D-9, D-8, D-7"],
+    ["Aparentado / Não Aparentado","FluCy (±TBI4Gy)","40 mg/kg D+3/D+4","4,5 mg/kg · D-9, D-8, D-7"],
+  ]},
+  {type:"alert",text:"⚠️ Diagnósticos: LMA · LLA · LNH · LH · Mielofibrose · Anemia Aplástica. Outros: discutir na reunião de pré-TMO (quintas, 17h)."},
+]},
+
+{id:"flucytbi",title:"FluCyTBI4 — Haplo PT-Cy",cat:"Condicionamentos",
+ tags:["haplo","FluCyTBI","RIC","fludarabina","ciclofosfamida","TBI","PT-Cy"],
+ sections:[
+  {type:"info",text:"Indicação: TCTH Haploidêntico. Intensidade: RIC."},
+  {type:"schedule",title:"Esquema",days:[
+    {day:"D-6",items:["Fludarabina 30 mg/m² IV"]},
+    {day:"D-5",items:["Fludarabina 30 mg/m² IV"]},
+    {day:"D-4",items:["Fludarabina 30 mg/m² IV"]},
+    {day:"D-3",items:["Fludarabina 30 mg/m² IV","Ciclofosfamida 14,5 mg/kg IV"],note:"Hidratação + MESNA"},
+    {day:"D-2",items:["Fludarabina 30 mg/m² IV","Ciclofosfamida 14,5 mg/kg IV"],note:"Hidratação + MESNA"},
+    {day:"D-1",items:["Repouso"]},
+    {day:"D0", items:["Infusão da CPH","TBI 400 cGy (dose única)"],note:"Dia do transplante"},
+    {day:"D+3",items:["Ciclofosfamida 40 mg/kg IV (PT-Cy)"],note:"Hidratação + MESNA"},
+    {day:"D+4",items:["Ciclofosfamida 40 mg/kg IV (PT-Cy)"],note:"Hidratação + MESNA"},
+    {day:"D+5",items:["Sirolimus 4mg/d VO + MMF 1000mg VO 12/12h"]},
+  ]},
+]},
+
+{id:"flubu2",title:"FluBu2 — RIC Alogênico",cat:"Condicionamentos",
+ tags:["FluBu2","RIC","fludarabina","bussulfano"],
+ sections:[
+  {type:"info",text:"Indicação: TCTH alogênico RIC. Bu total: 6,4 mg/kg IV."},
+  {type:"schedule",title:"Esquema",days:[
+    {day:"D-6",items:["Fludarabina 30 mg/m² IV"]},
+    {day:"D-5",items:["Fludarabina 30 mg/m² IV"]},
+    {day:"D-4",items:["Fludarabina 30 mg/m² IV"]},
+    {day:"D-3",items:["Fludarabina 30 mg/m² IV","Bussulfano 3,2 mg/kg IV (3h)"]},
+    {day:"D-2",items:["Fludarabina 30 mg/m² IV","Bussulfano 3,2 mg/kg IV (3h)"]},
+    {day:"D-1",items:["Repouso"]},
+    {day:"D0", items:["Infusão da CPH"],note:"Dia do transplante"},
+  ]},
+  {type:"list",title:"Observações",items:["Anticonvulsivante profilático nos dias de Bu","Se AUC: contatar HIAE"]},
+]},
+
+{id:"flubu3",title:"FluBu3 — MAC Alogênico",cat:"Condicionamentos",
+ tags:["FluBu3","MAC","fludarabina","bussulfano","AUC"],
+ sections:[
+  {type:"info",text:"Indicação: TCTH alogênico MAC. Bu total: 9,6 mg/kg IV."},
+  {type:"schedule",title:"Esquema",days:[
+    {day:"D-7",items:["Dose teste de Bussulfano (se indicado)"],note:"Opcional"},
+    {day:"D-6",items:["Fludarabina 30 mg/m² IV"]},
+    {day:"D-5",items:["Fludarabina 30 mg/m² IV","Bussulfano 3,2 mg/kg IV"]},
+    {day:"D-4",items:["Fludarabina 30 mg/m² IV","Bussulfano 3,2 mg/kg IV (ajustada por AUC)"]},
+    {day:"D-3",items:["Fludarabina 30 mg/m² IV","Bussulfano 3,2 mg/kg IV (ajustada por AUC)"]},
+    {day:"D-2",items:["Fludarabina 30 mg/m² IV"]},
+    {day:"D-1",items:["Repouso"]},
+    {day:"D0", items:["Infusão da CPH"],note:"Dia do transplante"},
+  ]},
+  {type:"list",title:"Observações",items:["Anticonvulsivante profilático nos dias de Bu","Alvo AUC: 900–1350 µmol·min/L"]},
+]},
+
+{id:"flumel",title:"FluMel140 — RIC Alogênico",cat:"Condicionamentos",
+ tags:["FluMel","RIC","fludarabina","melfalano"],
+ sections:[
+  {type:"info",text:"Indicação: TCTH alogênico RIC. Alternativo ao Bu."},
+  {type:"schedule",title:"Esquema",days:[
+    {day:"D-6",items:["Fludarabina 30 mg/m² IV"]},
+    {day:"D-5",items:["Fludarabina 30 mg/m² IV"]},
+    {day:"D-4",items:["Fludarabina 30 mg/m² IV"]},
+    {day:"D-3",items:["Fludarabina 30 mg/m² IV"]},
+    {day:"D-2",items:["Fludarabina 30 mg/m² IV"]},
+    {day:"D-1",items:["Melfalano 140 mg/m² IV"],note:"Hiperhidratação"},
+    {day:"D0", items:["Infusão da CPH"],note:"Dia do transplante"},
+  ]},
+]},
+
+{id:"mel200",title:"Mel200 — Autólogo (MM padrão)",cat:"Condicionamentos",
+ tags:["Mel200","melfalano","mieloma","autólogo"],
+ sections:[
+  {type:"info",text:"Indicação: TCTH autólogo Mieloma Múltiplo — dose padrão."},
+  {type:"schedule",title:"Esquema",days:[
+    {day:"D-1",items:["Melfalano 200 mg/m² IV"],note:"Hiperhidratação · Antiemético · Crioterapia oral"},
+    {day:"D0", items:["Infusão da CPH"],note:"Dia do transplante"},
+  ]},
+]},
+
+{id:"mel140",title:"Mel140 — Autólogo (MM dose reduzida)",cat:"Condicionamentos",
+ tags:["Mel140","melfalano","mieloma","autólogo","idoso"],
+ sections:[
+  {type:"info",text:"Indicação: TCTH autólogo MM — dose reduzida."},
+  {type:"schedule",title:"Esquema",days:[
+    {day:"D-1",items:["Melfalano 140 mg/m² IV"],note:"Hiperhidratação · Antiemético"},
+    {day:"D0", items:["Infusão da CPH"],note:"Dia do transplante"},
+  ]},
+]},
+
+{id:"beam",title:"BEAM — Autólogo (Linfoma)",cat:"Condicionamentos",
+ tags:["BEAM","BCNU","carmustina","etoposídeo","citarabina","melfalano","linfoma"],
+ sections:[
+  {type:"info",text:"Indicação: TCTH autólogo Linfoma Hodgkin e Não-Hodgkin."},
+  {type:"schedule",title:"Esquema",days:[
+    {day:"D-7",items:["Carmustina (BCNU) 300 mg/m² IV"],note:"Infusão em 2h · Monitorar toxicidade pulmonar"},
+    {day:"D-6",items:["Etoposídeo 100 mg/m² IV 12/12h","Citarabina 200 mg/m² IV 12/12h"]},
+    {day:"D-5",items:["Etoposídeo 100 mg/m² IV 12/12h","Citarabina 200 mg/m² IV 12/12h"]},
+    {day:"D-4",items:["Etoposídeo 100 mg/m² IV 12/12h","Citarabina 200 mg/m² IV 12/12h"]},
+    {day:"D-3",items:["Etoposídeo 100 mg/m² IV 12/12h","Citarabina 200 mg/m² IV 12/12h"]},
+    {day:"D-2",items:["Melfalano 140 mg/m² IV"],note:"Hiperhidratação · Crioterapia oral"},
+    {day:"D-1",items:["Repouso"]},
+    {day:"D0", items:["Infusão da CPH"],note:"Dia do transplante"},
+  ]},
+]},
+
+{id:"leam",title:"LEAM — Autólogo (Linfoma)",cat:"Condicionamentos",
+ tags:["LEAM","CCNU","lomustina","etoposídeo","citarabina","melfalano","linfoma"],
+ sections:[
+  {type:"info",text:"Indicação: TCTH autólogo Linfoma. Alternativa ao BEAM (Lomustina VO)."},
+  {type:"schedule",title:"Esquema",days:[
+    {day:"D-7",items:["Lomustina (CCNU) 200 mg/m² VO"],note:"Em jejum · Dose única oral"},
+    {day:"D-6",items:["Etoposídeo 100 mg/m² IV 12/12h","Citarabina 200 mg/m² IV 12/12h"]},
+    {day:"D-5",items:["Etoposídeo 100 mg/m² IV 12/12h","Citarabina 200 mg/m² IV 12/12h"]},
+    {day:"D-4",items:["Etoposídeo 100 mg/m² IV 12/12h","Citarabina 200 mg/m² IV 12/12h"]},
+    {day:"D-3",items:["Etoposídeo 100 mg/m² IV 12/12h","Citarabina 200 mg/m² IV 12/12h"]},
+    {day:"D-2",items:["Melfalano 140 mg/m² IV"],note:"Hiperhidratação · Crioterapia oral"},
+    {day:"D-1",items:["Repouso"]},
+    {day:"D0", items:["Infusão da CPH"],note:"Dia do transplante"},
+  ]},
+]},
+
+{id:"bendaeam",title:"BendaEAM — Autólogo (Linfoma)",cat:"Condicionamentos",
+ tags:["BendaEAM","bendamustina","etoposídeo","citarabina","melfalano","linfoma"],
+ sections:[
+  {type:"info",text:"Indicação: TCTH autólogo Linfoma — alternativa a BEAM/LEAM."},
+  {type:"schedule",title:"Esquema",days:[
+    {day:"D-9",items:["Bendamustina 200 mg/m² IV"],note:"Infusão em 60 min"},
+    {day:"D-8",items:["Bendamustina 200 mg/m² IV"]},
+    {day:"D-7",items:["Etoposídeo 100 mg/m² IV 12/12h","Citarabina 200 mg/m² IV 12/12h"]},
+    {day:"D-6",items:["Etoposídeo 100 mg/m² IV 12/12h","Citarabina 200 mg/m² IV 12/12h"]},
+    {day:"D-5",items:["Etoposídeo 100 mg/m² IV 12/12h","Citarabina 200 mg/m² IV 12/12h"]},
+    {day:"D-4",items:["Etoposídeo 100 mg/m² IV 12/12h","Citarabina 200 mg/m² IV 12/12h"]},
+    {day:"D-2",items:["Melfalano 140 mg/m² IV"],note:"Hiperhidratação"},
+    {day:"D-1",items:["Repouso"]},
+    {day:"D0", items:["Infusão da CPH"],note:"Dia do transplante"},
+  ]},
+]},
+
+{id:"bu-coleta",title:"Coleta Nível Sérico — Bussulfano",cat:"Condicionamentos",
+ tags:["bussulfano","AUC","nível sérico","coleta","HIAE","Einstein","PK"],
+ sections:[
+  {type:"info",text:"Análise: HIAE — Química Especial\nContato: quimicaespecial@einstein.br\nEndereço: Rua Marco Giannini, 423 – Jardim Gilda Maria, SP"},
+  {type:"list",title:"Logística",items:[
+    "Dias: segunda a sábado — agendamento prévio obrigatório",
+    "Recebimento: 7h–17h (seg–sex) · 7h–16h (sáb)",
+    "Laudo no dia: até 11h (seg–sex) / até 10h (sáb)",
+  ]},
+  {type:"alert",text:"⚠️ Laboratório libera apenas concentrações isoladas — NÃO realiza cálculo PK."},
+  {type:"table",title:"Tempos de Coleta",headers:["Esquema","Tempos (min)","Total"],rows:[
+    ["Bu IV Adulto — Dose Teste","0·30·45·60·120·180·240·300·360·480","10 coletas — Bu nos primeiros 45 min"],
+    ["Bu IV Adulto — Condicionamento","0·30·60·120·180·240·300·360·480","9 coletas — Bu nas primeiras 3h"],
+    ["Bu IV Criança — Condicionamento","0·60·120·180·240·300·360·420·480","9 coletas — Bu nas primeiras 3h"],
+    ["Bu VO — Adulto e Criança","0·30·60·90·120·180·240·300·360","9 coletas"],
+  ]},
+  {type:"list",title:"Técnica e Estabilidade",items:[
+    "Tubo: heparina lítica ou seringa gasometria com heparina lítica",
+    "Coletar em acesso DIFERENTE do Bu",
+    "Centrifugar → isolar plasma → congelar até envio",
+    "Volume mínimo: 1 mL · execução: 2 mL",
+    "Refrigerado: 16h · Congelado: 30 dias",
+  ]},
+]},
+
+{id:"vacinacao",title:"Calendário de Vacinação Pós-TCTH",cat:"Seguimento",
+ tags:["vacinação","vacina","imunização","influenza","pneumo","COVID","SCR","HiB","VIP","hepatite","HPV","CRIE"],
+ sections:[
+  {type:"info",text:"📍 CRIE — Rua Borges Lagoa, 770, Vila Clementino, SP\n* UBS: Influenza e COVID-19\n△ Saúde suplementar: VSR, Meningo B, HZVr, HPV nonavalente"},
+  {type:"link",title:"📊 Planilha de Vacinação (Google Docs)",url:"https://docs.google.com/spreadsheets/d/1zNf5NsoLzJvb9WZOnYJJ-kOSS8pr2TdUNLM1el_GJSo/edit?gid=776827370#gid=776827370"},
+  {type:"table",title:"Cronograma por Vacina",headers:["Vacina","Doses (meses pós-TCTH)","Observações"],rows:[
+    ["Influenza *","3m · 6m","Repetir anualmente"],
+    ["COVID-19 *","3m","Repetir a cada 6 meses"],
+    ["Pneumo 20","3m · 5m · 7m → 12m (PPV20)","3× PCV20 + 1× PPV20"],
+    ["Meningo ACWY","6m · 8m","—"],
+    ["Haemophilus (HiB)","7m · 9m · 11m","—"],
+    ["Poliomielite (VIP)","7m · 9m · 11m","—"],
+    ["Hepatite A","8m · 14m","—"],
+    ["Hepatite B","6m · 7m · 12m","—"],
+    ["HPV quadrivalente","7m · 9m · 12m","9–45 anos"],
+    ["Tdap","6m · 8m · 10m","Repetir a cada 10 anos (dT)"],
+    ["SCR","12m · 14m","Apenas sem imunossupressão"],
+    ["Varicela","24m · 26m","Preferir recombinante"],
+    ["Dengue","24m","—"],
+    ["Febre Amarela","25m","—"],
+    ["VSR △","7m","1ª Arexvy® · 2ª Abrysvo®"],
+    ["Meningo B △","6m · 8m","—"],
+    ["HZVr △","12m · 14m","Shingrix®"],
+    ["HPV nonavalente △","7m · 9m · 12m","9–45 anos"],
+  ]},
+  {type:"alert",text:"⚠️ SCR e Varicela: apenas sem imunossupressão\n⚠️ COVID-19: fora do calendário oficial — cronograma paralelo"},
+]},
+
+{id:"prof-fungica",title:"Profilaxia Fúngica",cat:"Profilaxias",
+ tags:["fúngica","fluconazol","voriconazol","isavuconazol","aplasia","alto risco","baixo risco"],
+ sections:[
+  {type:"list",title:"Durante Aplasia — Alto Risco",items:[
+    "🔴 Voriconazol 200mg 12/12h  OU",
+    "🔴 Isavuconazol 200mg 8/8h (×6 doses de ataque) → 200mg/d",
+    "Critérios: Cordão · neutropenia >21d · corticoide ≥1mg/kg/d >7d · reativação CMV",
+  ]},
+  {type:"list",title:"Durante Aplasia — Baixo Risco",items:["🟢 Fluconazol 300mg/d"]},
+  {type:"list",title:"Após Enxertia",items:[
+    "Alogênico: manter Fluconazol até D+30",
+    "Autólogo: suspender após enxertia neutrofílica",
+  ]},
+  {type:"alert",text:"⚠️ Suspender 2 dias antes de Ciclofosfamida"},
+  {type:"info",text:"📚 Ref.: Vuichard D. BMC Infect Dis 2014;14:573 · Maertens JA. J Antimicrob Chemother 2018;73(12):3221-3230"},
+]},
+
+{id:"prof-hsv",title:"Profilaxia HSV (Aciclovir)",cat:"Profilaxias",
+ tags:["HSV","aciclovir","viral","herpes"],
+ sections:[
+  {type:"list",title:"Alogênico",items:[
+    "Período: internação até 12–18 meses (prolongar se GvHD)",
+    "Dose: Aciclovir 400mg/d",
+  ]},
+  {type:"list",title:"Autólogo",items:["Período: até 6 meses · Dose: Aciclovir 400mg/d"]},
+]},
+
+{id:"prof-pcp",title:"Profilaxia PCP (Bactrim)",cat:"Profilaxias",
+ tags:["pneumocistose","bactrim","SMZ","TMP","PCP"],
+ sections:[
+  {type:"list",title:"Alogênico",items:[
+    "Período: internação até 6 meses ou suspensão da imunossupressão",
+    "Não iniciar durante condicionamento em LMA ou SMD",
+    "Dose: SMZ+TMP 800/160mg às 2ª, 4ª e 6ª",
+  ]},
+  {type:"list",title:"Autólogo",items:[
+    "Período: internação até 3 meses · Reiniciar no D+30",
+    "Dose: SMZ+TMP 800/160mg às 2ª, 4ª e 6ª",
+  ]},
+  {type:"alert",text:"⚠️ Suspender no D-2 (antes da infusão da CPH)"},
+]},
+
+{id:"cmv",title:"CMV — Monitorização e Tratamento",cat:"CMV",
+ tags:["CMV","ganciclovir","foscavir","PCR","viremia","D+15","D+100"],
+ sections:[
+  {type:"list",title:"Monitorização",items:[
+    "Início: enxertia (ou D+15) · 2× por semana",
+    "Término: D+100, fim da imunossupressão ou resolução do GvHD",
+  ]},
+  {type:"list",title:"Critérios",items:[
+    "✅ Iniciar: 1 PCR CMV > 1.000",
+    "🛑 Suspender: 1 PCR CMV < 1.000",
+  ]},
+  {type:"list",title:"Ganciclovir — 1ª linha",items:[
+    "Internados: 5 mg/kg IV 12/12h",
+    "Ambulatoriais: 5 mg/kg/d IV (2ª a 6ª)",
+  ]},
+  {type:"list",title:"Foscavir — Alternativa",items:[
+    "60 mg/kg/dose IV 8/8h  OU  90 mg/kg/dose IV 12/12h",
+  ]},
+]},
+
+{id:"ltfu-d100",title:"LTFU — D+100",cat:"Seguimento",
+ tags:["LTFU","D+100","seguimento","exames","densitometria","PFP","eco"],
+ sections:[
+  {type:"list",title:"Exames D+100",items:[
+    "Hemograma · creatinina · ureia · Na · K · Mg · Ca total",
+    "ALT · AST · BT · FA · Gama GT · PCR",
+    "Colesterol total e frações · Ferritina · IST · Vitamina D",
+    "EFP sérica · IgA · IgM · IgG (CD4/CD8 opcional)",
+    "PCR CMV · Quimerismo SP",
+    "Leucemias agudas: mielograma + IFT-DRM + quimerismo MO",
+    "Ecocardiograma · Densitometria óssea · PFP",
+    "PET-CT (linfomas — se não solicitado após TCTH alo)",
+  ]},
+]},
+
+{id:"ltfu-seguimento",title:"LTFU — Profilaxias e Periodicidade",cat:"Seguimento",
+ tags:["LTFU","periodicidade","profilaxia","DECH","retorno","aciclovir","bactrim"],
+ sections:[
+  {type:"list",title:"Suspensão das Profilaxias (Sem DECH)",items:[
+    "SMZ+TMP (Bactrim): até 6 meses (ou suspensão da imunossupressão)",
+    "Aciclovir: até 24 meses",
+    "⚠️ Prolongar ou reiniciar se DECH",
+  ]},
+  {type:"table",title:"Periodicidade de Retorno",headers:["Período","Frequência"],rows:[
+    ["Até D+100","Semanal"],["D+100 — 1 ano","Mensal"],
+    ["1 — 2 anos","Trimestral"],["2 — 4 anos","Semestral"],[">5 anos","Anual"],
+  ]},
+]},
+
+{id:"ltfu-exames",title:"LTFU — Exames de Seguimento",cat:"Seguimento",
+ tags:["LTFU","exames","laboratoriais","quimerismo","densitometria","colonoscopia","PSA","mamografia","rastreio","neoplasia"],
+ sections:[
+  {type:"info",text:"Até 1 ano: exames conforme demanda clínica.\nApós 1 ano: mínimo anual conforme abaixo."},
+  {type:"list",title:"Laboratoriais (Anual após 1 ano)",items:[
+    "Hemograma · Ureia · Creatinina · TGO · TGP · FA · GGT · BT",
+    "Na · K · Ca total · Mg · Albumina",
+    "Colesterol total e frações · Glicemia jejum · HbA1c",
+    "TSH · T4 livre · Vitamina D",
+    "IgA · IgM · IgG — 1 vez; repetir se infecção de repetição",
+  ]},
+  {type:"table",title:"Exames de Imagem / Funcionais",headers:["Exame","Quando"],rows:[
+    ["Densitometria óssea","1 ano; após individualizar"],
+    ["Ecocardiograma (TT)","D+100 · 1 ano · 5 anos"],
+    ["PFP","D+100; DECHc: 3/3 meses; demais: só se sintomas"],
+    ["Quimerismo","D+30 · D+100 · D+1 ano · se suspeita de recaída"],
+  ]},
+  {type:"list",title:"Rastreio de Neoplasias",items:[
+    "Colonoscopia: a partir dos 50 anos",
+    "Mulheres: mamografia + colpocitologia oncótica",
+    "Homens: PSA a partir dos 40 anos",
+  ]},
+  {type:"list",title:"Seguimento Anual",items:["Odontologia · Oftalmologia"]},
+  {type:"alert",text:"📚 Ref.: Rotz SJ et al. Transplant Cell Ther. 2024;30(4):349-385."},
+]},
+
+{id:"auto-pre",title:"Pré-TMO Autólogo",cat:"Autólogo",
+ tags:["autólogo","pré-TMO","mieloma","linfoma","exames"],
+ sections:[
+  {type:"list",title:"Exames Gerais",items:[
+    "Tipagem ABO e RH · Sorologias (Hemocentro)",
+    "Hemograma · Creatinina · TGO · Gama-GT · BT · Glicemia · antiHBs · Beta HCG (se fértil)",
+    "Avaliação de rede venosa (equipe de aférese) · Termo de consentimento",
+  ]},
+  {type:"list",title:"Doença de Base",items:[
+    "Mieloma: EFP · IFX · Kappa e Lambda Livre · Inventário ósseo",
+    "Linfomas: PET-CT <30 dias (alternativa: TCs)",
+  ]},
+]},
+
+{id:"auto-mobilizacao",title:"Mobilização e Coleta (Auto)",cat:"Autólogo",
+ tags:["mobilização","G-CSF","aférese","CD34","CPH"],
+ sections:[
+  {type:"list",title:"Sangue Periférico",items:[
+    "D-5: G-CSF 15–20 mcg/kg/d — paciente (manhã)",
+    "D-5: G-CSF 10 mcg/kg/d — doador",
+    "D-1: CD34 SP + passagem de cateter · D0: CD34 da bolsa",
+  ]},
+  {type:"list",title:"Medula Óssea",items:["Agendamento CC · D0: CD34 · TNC · pesagem · fracionamento"]},
+]},
+
+];
+
+/* ═══════ MANUAL ═══════ */
+const MANUAL=[
+{id:"m-reuniao",title:"Reunião Pré-TMO — Quinta 17h",icon:"📋",sections:[
+  {type:"info",text:"Reunião semanal de pré-TMO\n📅 Quintas-feiras às 17h — Hemocentro"},
+  {type:"framelink",title:"🔬 Pré-TMO Alogênico",subtitle:"Airtable — Lista de pacientes alo",url:"https://airtable.com/appm2Ol2wPyppR9cw/shriosarrRzsUIXl4",color:"#007AFF"},
+  {type:"framelink",title:"💉 Pré-TMO Autólogo",subtitle:"Google Sheets — Lista de pacientes auto",url:"https://docs.google.com/spreadsheets/d/1EMMSXyCGnOhXUn_lymvQ4OmVbI7tYst9N1JWkzWBWSE/edit?usp=sharing",color:"#5856D6"},
+  {type:"framelink",title:"🏥 Pacientes Internados",subtitle:"Google Docs — Discussão de casos",url:"https://docs.google.com/document/d/1GE5WoogOd13Hasy0w_6yOSRZT30OVi1yysLsU-YKbcA/edit?tab=t.0",color:"#34C759"},
+]},
+{id:"m-plantao",title:"Plantão e Pendências — Trello",icon:"📌",sections:[
+  {type:"info",text:"Quadro de passagem de plantão e pendências dos pacientes internados no TMO-EPM."},
+  {type:"framelink",title:"📌 Trello TMO-EPM",subtitle:"Plantão · Pendências · Pacientes internados",url:"https://trello.com/b/6100bf6c/tmo-epm",color:"#FF9500"},
+]},
+{id:"m-equipe",title:"Equipe TMO UNIFESP",icon:"👥",sections:[
+  {type:"list",title:"Docente",items:["Prof. Dr. Celso Arrais — Coordenador · 11 98939-5815"]},
+  {type:"list",title:"Médicos Assistentes",items:[
+    "Amanda Rossignoli Marques — 35 98429-2556",
+    "Ana Marcela Rojas Fonseca — 11 99711-2777",
+    "Caio Cesar Justino de Oliveira — 11 95056-0347",
+    "Fernanda Santos Azevedo — 22 99958-1788",
+    "Pedro Arruda de Moraes — 18 99795-3576",
+    "Vinícius Campos de Molla — 11 94962-8282",
+  ]},
+  {type:"list",title:"Estrutura",items:[
+    "8 leitos com filtro HEPA — HSP 12º Andar",
+    "Reunião pré-TMO: quintas-feiras às 17h — Hemocentro",
+  ]},
+]},
+{id:"m-enfermaria",title:"Enfermaria — R5",icon:"🏥",sections:[
+  {type:"info",text:"R5 chega à Enfermaria de Transplante — HSP 12º Andar — às 8:00h"},
+  {type:"list",title:"Responsabilidades",items:[
+    "Controlar lista de internação",
+    "Evolução médica e exame físico diário (supervisão R3/R4)",
+    "Prescrição médica diária",
+    "Contatar farmácia de QT antes do condicionamento",
+    "Contatar aférese antes da mobilização",
+    "Contatar GRAACC: criopreservação · DLI · depleção de hemácias",
+    "Contatar Casa Hope para pacientes sem residência próxima",
+    "Agendamento de CC para coleta de MO in situ",
+    "Preparar casos para visita geral de quinta-feira",
+    "Laudo de SP e mielograma em até 48h · Lista de plantão diária",
+  ]},
+]},
+{id:"m-ambulatorio",title:"Ambulatório / Hospital Dia — R5",icon:"🏢",sections:[
+  {type:"info",text:"Segunda a sexta-feira, início às 8:00h"},
+  {type:"list",title:"Atividades",items:[
+    "Mielogramas e biópsias de MO ambulatoriais",
+    "Laudo de SP e mielograma (supervisão assistente)",
+    "Atendimento de intercorrências · Interconsultas · Agendamento de exames",
+    "Contatar farmácia de QT · aférese · GRAACC quando necessário",
+    "Programação de radioterapia · Medicamentos não-padronizados",
+  ]},
+]},
+{id:"m-rotinas",title:"Rotinas e Atividades Didáticas",icon:"📚",sections:[
+  {type:"list",title:"Atividades Obrigatórias",items:[
+    "Aula Hematologia Geral — Segunda 8h",
+    "Aula Temática — Segunda 18h (Hospital 9 de Julho)",
+    "Aula Hematologia Dr. Celso — Terça 17h30",
+    "Journal Club — Sexta 8h",
+    "4 Reuniões de Óbito / ano (2 H9J + 2 HSP) — Segundas às 18h",
+  ]},
+  {type:"list",title:"Avaliações",items:[
+    "Prova teórica semestral · Avaliação prática por estágio",
+    "Média ≥ 5,0 para aprovação · TCC ao final da residência",
+  ]},
+]},
+{id:"m-rodizio",title:"Rodízio Anual",icon:"🔄",sections:[
+  {type:"table",title:"4 Residentes",headers:["Mês","A","B","C","D"],rows:[
+    ["Março","Ambulatório","Enfermaria","Ambulatório","Enfermaria"],
+    ["Abril","H9J","Ambulatório","Enfermaria","Ambulatório"],
+    ["Maio","Enfermaria","Enfermaria","Ambulatório","Ambulatório"],
+    ["Junho","Enfermaria","Ambulatório","Amb/H9J","Enfermaria"],
+    ["Julho","Ambulatório","Férias/CRIO","Enfermaria","Ambulatório"],
+    ["Agosto","Enfermaria","IGEN/H9J","Férias/IGEN","Enfermaria"],
+    ["Setembro","IGEN/H9J","H9J","Enfermaria","Férias/IGEN"],
+    ["Outubro","Enfermaria","Eletivo","Amb/H9J","IGEN/H9J"],
+    ["Novembro","Férias/CRIO","Enfermaria","H9J","Eletivo"],
+    ["Dezembro","Eletivo","Férias/H9J","Enfermaria","Férias/H9J"],
+    ["Janeiro","Férias/H9J","Enfermaria","Eletivo","H9J"],
+    ["Fevereiro","Ambulatório","Ambulatório","Férias/CRIO","Enfermaria"],
+  ]},
+]},
+{id:"m-ramais",title:"Ramais — TMO e HSP",icon:"📞",sections:[
+  {type:"list",title:"Ramais TMO",items:[
+    "Enfermaria TMO (12º Andar): 2361",
+    "Ambulatório TMO: 2164",
+    "Recepção Hemocentro: 2600",
+    "IGEN (HLA): 21017100",
+    "CRIE: 1373",
+    "Serviço Social APAC: 4020",
+    "Supervisão: 5576-4848 · 4326",
+    "Tomografia: 2748",
+  ]},
+  {type:"list",title:"Ramais HSP — Serviços de Apoio",items:[
+    "Ambulatório de QT: 4381 · 5571-8263",
+    "Banco de Sangue: 4071 · 2295 · 2294",
+    "Centro Cirúrgico: 4610 · 17119",
+    "Farmácia Quimioterapia: 17102 · 4129",
+    "Farmácia Central: 4079 · 2166 · 2167 · 4299 · 2145",
+    "Microbiologia: 17100 · Nutrição: 4342",
+    "Radioterapia: 4007 · 4009 · 55764007",
+    "Raio-X: 4022 · 17132 · Sorologia: 17320",
+    "UTI Geral Adulto: 4001 · 4690",
+    "Semi-Intensiva PS Adulto: 4410 · 4316 · 4425",
+    "Internação: 2026 · 4015 · 4019",
+    "PABX: 55764000",
+  ]},
+]},
+{id:"m-infos",title:"Informações Úteis",icon:"ℹ️",sections:[
+  {type:"list",title:"Ambulatórios e Serviços Externos",items:[
+    "Assistente Social: VOIP 17021 · 17044 · 17056\n   Rua José de Magalhães, 340 (Gilberto ou Jennifer)",
+    "Cardio-Oncologia: Quartas a partir das 13h — Rua José de Magalhães, 340",
+    "CCDI (Entecavir): Rua Loefgreen, 1588",
+    "Ginecologia: Rua Botucatu, 821 — 6º andar · Segundas 11h30–13h30",
+    "Reprodução Humana: Rua Botucatu, 725 (seg, qua, sex — 8h às 12h)",
+    "Oftalmologia: Pedro de Toledo, 583 — 1º andar (Enf. Lucrécia)",
+    "Urologia: Rua Botucatu, 821 — 8º andar (última qua ou qui do mês)",
+  ]},
+  {type:"list",title:"Códigos e Centro de Custo",items:[
+    "Centro de Custo TMO: 2019",
+    "PET-CT: 02.06.01.009-5",
+    "TC Seios da Face: 02.06.01.004-4",
+    "TC Tórax: 02.06.02.003-1",
+    "Dasatinib LMC fase blástica 2ª linha: 030403008-2",
+  ]},
+  {type:"list",title:"Sistemas — Usuários e Senhas",items:[
+    "GAL\n   Usuário: 2088576.drs / 2077485.amb\n   Senha: Tmo123! / Napoleao@875",
+    "Hosp Pharma: bynet.hosppharma.com.br/acesso\n   Usuário: vinicius.molla · Senha: 12andar*",
+    "HRIM\n   Usuário: e-tx-mo / e-hsp · Senha: txmo / e-080248",
+    "MATRIX: matrixnet.einstein.br\n   Usuário: medicosl155 · Senha: 6800",
+    "Laboratório TMO — Senha: 123",
+  ]},
+]},
+{id:"m-links",title:"Links Úteis",icon:"🔗",sections:[
+  {type:"link",title:"📋 Encaminhamento TCTH",url:"https://docs.google.com/forms/d/1uZentg7YUJp3L9-K72uEfjLoD2JHMyZ9eMYqQU916D0/viewform"},
+  {type:"link",title:"📋 Encaminhamento TCTH (alternativo)",url:"https://tinyurl.com/yx3xzawe"},
+  {type:"link",title:"📋 Reunião de Óbito",url:"https://docs.google.com/forms/d/1DUovjdq7AudcKaz4kM2LjKADwuW8xvH-bu6naJ3iOLs"},
+  {type:"link",title:"💉 Vacinação pós-TMO (planilha)",url:"https://docs.google.com/spreadsheets/d/1zNf5NsoLzJvb9WZOnYJJ-kOSS8pr2TdUNLM1el_GJSo"},
+  {type:"link",title:"📅 Cronograma H9J",url:"https://docs.google.com/spreadsheets/d/1MG-QVaoePV50x4kP4n3oYmdfPQMBwhZBP0jArADzJAQ"},
+  {type:"link",title:"📰 Journal Club",url:"https://docs.google.com/spreadsheets/d/1LZUhT7cREI_Q40ER7mTWqTV4m0FF8fQdVKWadeQXmhA"},
+  {type:"info",text:"Contato HIAE (Bussulfano): quimicaespecial@einstein.br"},
+]},
+];
+
+/* ═══════ DROGAS ═══════ */
+const DRUGS=[
+  {id:"g-int", group:"Antivirais",           name:"Ganciclovir",      sub:"Internado — 12/12h",            inp:"kg",  freq:"12/12h IV",     formula:"5 mg/kg/dose",    mesna:false,calc:w=>({dose:(5*w).toFixed(1),    unit:"mg / dose"})},
+  {id:"g-amb", group:"Antivirais",           name:"Ganciclovir",      sub:"Ambulatorial — 2ª–6ª",           inp:"kg",  freq:"1× /dia IV",    formula:"5 mg/kg/dose",    mesna:false,calc:w=>({dose:(5*w).toFixed(1),    unit:"mg / dose"})},
+  {id:"f-60",  group:"Antivirais",           name:"Foscavir",         sub:"60 mg/kg 8/8h",                 inp:"kg",  freq:"8/8h IV",       formula:"60 mg/kg/dose",   mesna:false,calc:w=>({dose:(60*w).toFixed(0),   unit:"mg / dose"})},
+  {id:"f-90",  group:"Antivirais",           name:"Foscavir",         sub:"90 mg/kg 12/12h",               inp:"kg",  freq:"12/12h IV",     formula:"90 mg/kg/dose",   mesna:false,calc:w=>({dose:(90*w).toFixed(0),   unit:"mg / dose"})},
+  {id:"csa",   group:"Suporte",              name:"Ciclosporina",     sub:"2,5 mg/kg 12/12h",              inp:"kg",  freq:"12/12h VO",     formula:"2,5 mg/kg",       mesna:false,calc:w=>({dose:(2.5*w).toFixed(1),  unit:"mg / dose"})},
+  {id:"gcsfP", group:"Suporte",              name:"G-CSF",            sub:"Paciente — mobilização",        inp:"kg",  freq:"1× /dia SC",    formula:"15–20 mcg/kg/d",  mesna:false,calc:w=>({dose:`${(15*w).toFixed(0)}–${(20*w).toFixed(0)}`,unit:"mcg / dia"})},
+  {id:"gcsfD", group:"Suporte",              name:"G-CSF",            sub:"Doador",                        inp:"kg",  freq:"1× /dia SC",    formula:"10 mcg/kg/d",     mesna:false,calc:w=>({dose:(10*w).toFixed(0),   unit:"mcg / dia"})},
+  {id:"iver",  group:"Suporte",              name:"Ivermectina",      sub:"Anti-parasitário",              inp:"kg",  freq:"Dose única VO", formula:"200 mcg/kg",      mesna:false,calc:w=>({dose:(0.2*w).toFixed(1),  unit:"mg (total)"})},
+  {id:"bu-iv", group:"Condicionamento / kg", name:"Bussulfano IV",    sub:"3,2 mg/kg/dose (1×/dia)",       inp:"kg",  freq:"1× /dia IV 3h", formula:"3,2 mg/kg/dose",  mesna:false,calc:w=>({dose:(3.2*w).toFixed(1),  unit:"mg / dose"})},
+  {id:"bu-vo", group:"Condicionamento / kg", name:"Bussulfano VO",    sub:"4 mg/kg/dose (6/6h)",           inp:"kg",  freq:"6/6h VO",       formula:"4 mg/kg/dose",    mesna:false,calc:w=>({dose:(4*w).toFixed(1),    unit:"mg / dose"})},
+  {id:"cy-50", group:"Condicionamento / kg", name:"Ciclofosfamida",   sub:"PT-Cy — 50 mg/kg",              inp:"kg",  freq:"1× /dia IV",    formula:"50 mg/kg/dose",   mesna:true, calc:w=>({dose:(50*w).toFixed(0),   unit:"mg / dose"})},
+  {id:"cy-40", group:"Condicionamento / kg", name:"Ciclofosfamida",   sub:"PT-Cy — 40 mg/kg",              inp:"kg",  freq:"1× /dia IV",    formula:"40 mg/kg/dose",   mesna:true, calc:w=>({dose:(40*w).toFixed(0),   unit:"mg / dose"})},
+  {id:"cy-25", group:"Condicionamento / kg", name:"Ciclofosfamida",   sub:"PT-Cy — 25 mg/kg",              inp:"kg",  freq:"1× /dia IV",    formula:"25 mg/kg/dose",   mesna:true, calc:w=>({dose:(25*w).toFixed(0),   unit:"mg / dose"})},
+  {id:"cy-cn", group:"Condicionamento / kg", name:"Ciclofosfamida",   sub:"Condicionamento — 14,5 mg/kg", inp:"kg",  freq:"1× /dia IV",    formula:"14,5 mg/kg/dose", mesna:false,calc:w=>({dose:(14.5*w).toFixed(1), unit:"mg / dose"})},
+  {id:"flu",   group:"Condicionamento / m²", name:"Fludarabina",      sub:"30 mg/m²/d",                   inp:"bsa", freq:"1× /dia IV",    formula:"30 mg/m²/dia",    mesna:false,calc:b=>({dose:(30*b).toFixed(0),   unit:"mg / dia"})},
+  {id:"mel200",group:"Condicionamento / m²", name:"Melfalano",        sub:"200 mg/m² (Mieloma padrão)",   inp:"bsa", freq:"Dose única IV",  formula:"200 mg/m²",       mesna:false,calc:b=>({dose:(200*b).toFixed(0),  unit:"mg (total)"})},
+  {id:"mel140",group:"Condicionamento / m²", name:"Melfalano",        sub:"140 mg/m² (dose reduzida)",    inp:"bsa", freq:"Dose única IV",  formula:"140 mg/m²",       mesna:false,calc:b=>({dose:(140*b).toFixed(0),  unit:"mg (total)"})},
+  {id:"vp16",  group:"Condicionamento / m²", name:"Etoposídeo",       sub:"BEAM/LEAM — 100 mg/m² 12/12h", inp:"bsa", freq:"12/12h IV",     formula:"100 mg/m²/dose",  mesna:false,calc:b=>({dose:(100*b).toFixed(0),  unit:"mg / dose"})},
+  {id:"arac",  group:"Condicionamento / m²", name:"Citarabina",       sub:"BEAM/LEAM — 200 mg/m² 12/12h", inp:"bsa", freq:"12/12h IV",     formula:"200 mg/m²/dose",  mesna:false,calc:b=>({dose:(200*b).toFixed(0),  unit:"mg / dose"})},
+  {id:"bcnu",  group:"Condicionamento / m²", name:"Carmustina (BCNU)",sub:"BEAM — 300 mg/m²",             inp:"bsa", freq:"Dose única IV",  formula:"300 mg/m²",       mesna:false,calc:b=>({dose:(300*b).toFixed(0),  unit:"mg (total)"})},
+  {id:"ccnu",  group:"Condicionamento / m²", name:"Lomustina (CCNU)", sub:"LEAM — 200 mg/m²",             inp:"bsa", freq:"Dose única VO",  formula:"200 mg/m²",       mesna:false,calc:b=>({dose:(200*b).toFixed(0),  unit:"mg (total)"})},
+  {id:"benda", group:"Condicionamento / m²", name:"Bendamustina",     sub:"BendaEAM — 200 mg/m²/d × 2d",  inp:"bsa", freq:"1× /dia IV",    formula:"200 mg/m²/dose",  mesna:false,calc:b=>({dose:(200*b).toFixed(0),  unit:"mg / dose"})},
+];
+
+/* ═══════ HELPERS ═══════ */
+function Pill({text,color}){
+  return <span style={{background:color+"22",color,borderRadius:6,padding:"2px 8px",fontSize:11,fontWeight:600}}>{text}</span>;
+}
+function dColor(n){
+  if(!n)return"#8E8E93";
+  if(n.includes("Flu"))return"#007AFF";
+  if(n.includes("Bu"))return"#FF9500";
+  if(n.includes("Ciclo"))return"#FF3B30";
+  if(n.includes("Mel"))return"#5856D6";
+  if(n.includes("TBI"))return"#8B5CF6";
+  if(n.includes("Etopo"))return"#059669";
+  if(n.includes("Citara"))return"#0EA5E9";
+  if(n.includes("Carmustina"))return"#DC2626";
+  if(n.includes("Lomustina"))return"#9B1C1C";
+  if(n.includes("Benda"))return"#7C3AED";
+  if(n.includes("Infusão")||n.includes("Iniciar")||n.includes("Sirolimus"))return"#34C759";
+  return"#8E8E93";
+}
+
+/* ═══════ FRAME LINK — componente próprio para evitar hooks em if ═══════ */
+function FrameLinkCard({sec}){
+  const [open,setOpen]=useState(false);
+  const [loaded,setLoaded]=useState(false);
+  const [blocked,setBlocked]=useState(false);
+  return(
+    <div style={{marginBottom:12}}>
+      <div style={{background:"#fff",borderRadius:14,overflow:"hidden",boxShadow:"0 1px 3px rgba(0,0,0,0.07)"}}>
+        <div style={{padding:"14px 16px",display:"flex",alignItems:"center",gap:10}}>
+          <div style={{flex:1}}>
+            <div style={{fontSize:15,fontWeight:700,color:"#1C1C1E"}}>{sec.title}</div>
+            <div style={{fontSize:12,color:"#8E8E93",marginTop:2}}>{sec.subtitle}</div>
+          </div>
+          <a href={sec.url} target="_blank" rel="noreferrer"
+            style={{background:sec.color,color:"#fff",borderRadius:10,padding:"8px 14px",fontSize:13,fontWeight:700,textDecoration:"none",flexShrink:0}}>
+            ↗ Abrir
+          </a>
+          <button onClick={()=>{setOpen(o=>!o);setLoaded(false);setBlocked(false);}}
+            style={{background:sec.color+"22",color:sec.color,border:"none",borderRadius:10,padding:"8px 10px",fontSize:13,fontWeight:700,cursor:"pointer",flexShrink:0}}>
+            {open?"✕":"Ver"}
+          </button>
+        </div>
+        {open&&(
+          <div style={{height:380,position:"relative",borderTop:"1px solid #F2F2F7"}}>
+            {!loaded&&!blocked&&(
+              <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:8,background:"#F9F9FB"}}>
+                <div style={{fontSize:28}}>⏳</div>
+                <div style={{fontSize:13,color:"#8E8E93"}}>Carregando...</div>
+              </div>
+            )}
+            {blocked&&(
+              <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:12,background:"#F9F9FB",padding:20,textAlign:"center"}}>
+                <div style={{fontSize:36}}>🔒</div>
+                <div style={{fontSize:14,fontWeight:600,color:"#1C1C1E"}}>Site não permite incorporação</div>
+                <a href={sec.url} target="_blank" rel="noreferrer"
+                  style={{background:sec.color,color:"#fff",borderRadius:12,padding:"11px 22px",fontSize:14,fontWeight:700,textDecoration:"none"}}>
+                  ↗ Abrir no Safari
+                </a>
+              </div>
+            )}
+            <iframe src={sec.url}
+              style={{width:"100%",height:"100%",border:"none",display:blocked?"none":"block"}}
+              onLoad={()=>setLoaded(true)}
+              onError={()=>setBlocked(true)}
+              title={sec.title}/>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ═══════ SECTION RENDERER ═══════ */
+function ScheduleSection({sec}){
+  return(
+    <div style={{marginBottom:20}}>
+      {sec.title&&<div style={s.lbl}>{sec.title}</div>}
+      <div style={s.card}>
+        {sec.days.map((d,i)=>(
+          <div key={i} style={{display:"flex",borderBottom:i<sec.days.length-1?"1px solid #F2F2F7":"none",
+            background:d.day==="D0"?"#34C75908":d.day.startsWith("D+")?"#FF950008":"transparent"}}>
+            <div style={{width:50,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",
+              borderRight:"1px solid #F2F2F7",padding:"10px 0",
+              background:d.day==="D0"?"#34C759":d.day.startsWith("D+")?"#FF950020":"#F9F9FB"}}>
+              <span style={{fontSize:11,fontWeight:700,color:d.day==="D0"?"#fff":d.day.startsWith("D+")?"#FF9500":"#636366"}}>{d.day}</span>
+            </div>
+            <div style={{flex:1,padding:"8px 12px"}}>
+              {d.items.map((item,j)=>(
+                <div key={j} style={{display:"flex",alignItems:"flex-start",gap:7,marginBottom:j<d.items.length-1?4:0}}>
+                  <div style={{width:7,height:7,borderRadius:4,flexShrink:0,marginTop:4,background:dColor(item)}}/>
+                  <span style={{fontSize:13,color:"#1C1C1E",lineHeight:1.45}}>{item}</span>
+                </div>
+              ))}
+              {d.note&&<div style={{fontSize:11,color:"#8E8E93",marginTop:4,fontStyle:"italic",paddingLeft:14}}>{d.note}</div>}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ContentSection({sec}){
+  if(sec.type==="framelink") return <FrameLinkCard sec={sec}/>;
+  if(sec.type==="schedule")  return <ScheduleSection sec={sec}/>;
+  if(sec.type==="list") return(
+    <div style={{marginBottom:20}}>
+      {sec.title&&<div style={s.lbl}>{sec.title}</div>}
+      <div style={s.card}>
+        {sec.items.map((it,i)=>(
+          <div key={i} style={{...s.row,borderBottom:i<sec.items.length-1?"1px solid #F2F2F7":"none",
+            fontSize:14,color:"#1C1C1E",lineHeight:1.6,whiteSpace:"pre-wrap"}}>{it}</div>
+        ))}
+      </div>
+    </div>
+  );
+  if(sec.type==="table") return(
+    <div style={{marginBottom:20}}>
+      {sec.title&&<div style={s.lbl}>{sec.title}</div>}
+      <div style={{...s.card,overflowX:"auto"}}>
+        <div style={{minWidth:sec.headers.length>2?480:"auto"}}>
+          <div style={{display:"grid",gridTemplateColumns:`repeat(${sec.headers.length},1fr)`,
+            background:"#F9F9FB",borderBottom:"1px solid #F2F2F7"}}>
+            {sec.headers.map((h,i)=><div key={i} style={{padding:"9px 12px",fontSize:11,fontWeight:700,color:"#636366"}}>{h}</div>)}
+          </div>
+          {sec.rows.map((row,i)=>(
+            <div key={i} style={{display:"grid",gridTemplateColumns:`repeat(${sec.headers.length},1fr)`,
+              borderBottom:i<sec.rows.length-1?"1px solid #F2F2F7":"none",background:i%2?"#FAFAFA":"transparent"}}>
+              {row.map((cell,j)=><div key={j} style={{padding:"9px 12px",fontSize:12,color:"#1C1C1E",lineHeight:1.5,whiteSpace:"pre-line"}}>{cell}</div>)}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+  if(sec.type==="info") return(
+    <div style={{background:"#007AFF18",borderLeft:"3px solid #007AFF",borderRadius:10,
+      padding:"12px 16px",marginBottom:14,fontSize:14,color:"#1C1C1E",lineHeight:1.5,whiteSpace:"pre-line"}}>{sec.text}</div>
+  );
+  if(sec.type==="alert") return(
+    <div style={{background:"#FF950020",borderLeft:"3px solid #FF9500",borderRadius:10,
+      padding:"12px 16px",marginBottom:14,fontSize:14,color:"#1C1C1E",lineHeight:1.5,whiteSpace:"pre-line"}}>{sec.text}</div>
+  );
+  if(sec.type==="link") return(
+    <a href={sec.url} target="_blank" rel="noreferrer"
+      style={{display:"flex",alignItems:"center",gap:10,background:"#007AFF",borderRadius:12,
+        padding:"13px 16px",marginBottom:14,textDecoration:"none"}}>
+      <div style={{flex:1}}>
+        <div style={{fontSize:14,fontWeight:700,color:"#fff"}}>{sec.title}</div>
+        <div style={{fontSize:11,color:"rgba(255,255,255,0.7)",marginTop:1}}>Abre no Safari</div>
+      </div>
+      <span style={{color:"rgba(255,255,255,0.8)",fontSize:18}}>›</span>
+    </a>
+  );
+  if(sec.type==="video"){
+    const share=async()=>{
+      if(navigator.share){try{await navigator.share({title:"Orientação Pré-TMO — UNIFESP",url:sec.url});}catch(e){}}
+      else{try{await navigator.clipboard.writeText(sec.url);alert("Link copiado!");}catch(e){window.open(sec.url,"_blank");}}
+    };
+    return(
+      <div style={{...s.card,padding:"20px",marginBottom:14,textAlign:"center"}}>
+        <div style={{fontSize:48,marginBottom:8}}>🎬</div>
+        <div style={{fontSize:16,fontWeight:700,color:"#1C1C1E",marginBottom:4}}>{sec.title}</div>
+        <div style={{fontSize:12,color:"#8E8E93",marginBottom:16}}>UNIFESP — TMO</div>
+        <div style={{display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap"}}>
+          <a href={sec.url} target="_blank" rel="noreferrer"
+            style={{background:"#007AFF",color:"#fff",borderRadius:12,padding:"11px 20px",fontSize:14,fontWeight:700,textDecoration:"none"}}>▶️ Abrir vídeo</a>
+          <button onClick={share}
+            style={{background:"#34C759",color:"#fff",border:"none",borderRadius:12,padding:"11px 20px",fontSize:14,fontWeight:700,cursor:"pointer"}}>📤 Compartilhar</button>
+        </div>
+      </div>
+    );
+  }
+  return null;
+}
+
+/* ═══════ CARDS ═══════ */
+function ProtCard({p,onSel,fav,onFav}){
+  const c=CAT[p.cat]||{color:"#007AFF",icon:"📋"};
+  return(
+    <div onClick={()=>onSel(p)} style={{...s.card,display:"flex",alignItems:"center",padding:"12px 14px",gap:12,cursor:"pointer"}}>
+      <div style={{width:42,height:42,borderRadius:10,background:c.color+"1A",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>{c.icon}</div>
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{fontSize:15,fontWeight:600,color:"#1C1C1E",marginBottom:4}}>{p.title}</div>
+        <Pill text={p.cat} color={c.color}/>
+      </div>
+      <button onClick={e=>{e.stopPropagation();onFav(p.id)}}
+        style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:fav?"#FF9500":"#C7C7CC",flexShrink:0}}>
+        {fav?"★":"☆"}
+      </button>
+      <span style={{color:"#C7C7CC",fontSize:18,flexShrink:0}}>›</span>
+    </div>
+  );
+}
+
+function DetailScreen({p,onBack,fav,onFav}){
+  const c=CAT[p.cat]||{color:"#007AFF",icon:"📋"};
+  return(
+    <div style={s.page}>
+      <div style={{background:"#fff",padding:"12px 16px 14px",position:"sticky",top:0,zIndex:10,borderBottom:"1px solid #E5E5EA"}}>
+        <button onClick={onBack} style={{background:"none",border:"none",color:"#007AFF",fontSize:16,cursor:"pointer",display:"flex",alignItems:"center",gap:3,marginBottom:8}}>‹ Voltar</button>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+          <div style={{flex:1}}>
+            <div style={{fontSize:19,fontWeight:700,color:"#1C1C1E",marginBottom:5,lineHeight:1.3}}>{p.title}</div>
+            <Pill text={p.cat} color={c.color}/>
+          </div>
+          <button onClick={onFav} style={{background:"none",border:"none",fontSize:26,cursor:"pointer",color:fav?"#FF9500":"#C7C7CC",paddingLeft:12}}>{fav?"★":"☆"}</button>
+        </div>
+      </div>
+      <div style={{padding:"14px 16px 32px"}}>
+        {p.sections.map((sec,i)=><ContentSection key={i} sec={sec}/>)}
+      </div>
+    </div>
+  );
+}
+
+/* ═══════ SCREENS ═══════ */
+function HomeScreen({onSel,favs,onFav,onOpenManual}){
+  const qids=["protocolo-enfermaria","cmv","prof-fungica","dech-profilaxia","vacinacao","regimes-condicionamento"];
+  const quick=DATA.filter(p=>qids.includes(p.id));
+  const alerts=[
+    {text:"Suspender Bactrim no D-2 antes da infusão da CPH",color:"#FF9500"},
+    {text:"Suspender antifúngico 2 dias antes de Ciclofosfamida",color:"#FF3B30"},
+    {text:"1º PCR CMV a partir do D+15 · 2×/semana",color:"#007AFF"},
+    {text:"Sirolimus alvo 5–15 · CsA alvo 200–400 (ng/mL)",color:"#5856D6"},
+    {text:"Galactomanana: apenas sem profilaxia antifúngica",color:"#34C759"},
+    {text:"Anticonvulsivante profilático nos dias de Bussulfano",color:"#00BCD4"},
+  ];
+  const reuniao=[
+    {id:"m-reuniao",title:"Reunião Pré-TMO — Quinta 17h",icon:"📋",desc:"Alogênico · Autólogo · Internados"},
+    {id:"m-plantao",title:"Plantão e Pendências — Trello",icon:"📌",desc:"Passagem de plantão · TMO-EPM"},
+  ];
+  return(
+    <div style={{padding:"0 16px"}}>
+      <div style={{padding:"20px 0 12px"}}>
+        <div style={{fontSize:28,fontWeight:700,color:"#1C1C1E",marginBottom:2}}>TMO UNIFESP</div>
+        <div style={{fontSize:15,color:"#8E8E93"}}>Protocolos · EPM / HSP</div>
+      </div>
+      <div style={s.lbl}>📋 Reunião e Plantão</div>
+      {reuniao.map((r,i)=>{
+        const item=MANUAL.find(m=>m.id===r.id);
+        return(
+          <div key={i} onClick={()=>item&&onOpenManual(item)}
+            style={{...s.card,display:"flex",alignItems:"center",padding:"12px 14px",gap:12,cursor:"pointer"}}>
+            <div style={{width:42,height:42,borderRadius:10,background:"#63636615",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>{r.icon}</div>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontSize:14,fontWeight:600,color:"#1C1C1E",marginBottom:2}}>{r.title}</div>
+              <div style={{fontSize:12,color:"#8E8E93"}}>{r.desc}</div>
+            </div>
+            <span style={{color:"#C7C7CC",fontSize:18,flexShrink:0}}>›</span>
+          </div>
+        );
+      })}
+      <div style={s.lbl}>⚠️ Alertas Importantes</div>
+      <div style={s.card}>
+        {alerts.map((a,i)=>(
+          <div key={i} style={{...s.row,borderBottom:i<alerts.length-1?"1px solid #F2F2F7":"none",gap:10}}>
+            <div style={{width:6,height:6,borderRadius:3,background:a.color,flexShrink:0}}/>
+            <div style={{fontSize:13,color:"#1C1C1E",flex:1,lineHeight:1.4}}>{a.text}</div>
+          </div>
+        ))}
+      </div>
+      <div style={s.lbl}>Acesso Rápido — Protocolos</div>
+      {quick.map(p=><ProtCard key={p.id} p={p} onSel={onSel} fav={favs.has(p.id)} onFav={onFav}/>)}
+    </div>
+  );
+}
+
+function ProtocolsScreen({onSel,favs,onFav}){
+  const [q,setQ]=useState("");
+  const [cat,setCat]=useState("Todos");
+  const cats=["Todos","Alogênico","Condicionamentos","Autólogo","Profilaxias","CMV","Seguimento"];
+  const list=useMemo(()=>DATA.filter(p=>{
+    const mq=!q||p.title.toLowerCase().includes(q.toLowerCase())||p.tags.some(t=>t.toLowerCase().includes(q.toLowerCase()));
+    return(cat==="Todos"||p.cat===cat)&&mq;
+  }),[q,cat]);
+  return(
+    <div style={{padding:"0 16px"}}>
+      <div style={{padding:"20px 0 10px"}}><div style={{fontSize:28,fontWeight:700,color:"#1C1C1E"}}>Protocolos</div></div>
+      <div style={{...s.card,padding:"10px 14px",display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+        <span style={{color:"#8E8E93"}}>🔍</span>
+        <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Buscar protocolo, medicamento..."
+          style={{flex:1,border:"none",outline:"none",fontSize:15,color:"#1C1C1E",background:"transparent"}}/>
+        {q&&<button onClick={()=>setQ("")} style={{background:"#8E8E93",border:"none",borderRadius:50,width:18,height:18,color:"#fff",cursor:"pointer",fontSize:12}}>×</button>}
+      </div>
+      <div style={{overflowX:"auto",display:"flex",gap:8,paddingBottom:10}}>
+        {cats.map(c=>{
+          const active=c===cat,col=(CAT[c]?.color)||"#007AFF";
+          return <button key={c} onClick={()=>setCat(c)} style={{flexShrink:0,padding:"6px 14px",borderRadius:20,border:"none",cursor:"pointer",fontSize:12,fontWeight:600,background:active?(c==="Todos"?"#007AFF":col):"#fff",color:active?"#fff":"#636366",boxShadow:"0 1px 3px rgba(0,0,0,0.08)"}}>
+            {c==="Todos"?c:`${CAT[c]?.icon||""} ${c}`}
+          </button>;
+        })}
+      </div>
+      {list.length===0
+        ?<div style={{textAlign:"center",color:"#8E8E93",padding:40}}>Nenhum resultado</div>
+        :list.map(p=><ProtCard key={p.id} p={p} onSel={onSel} fav={favs.has(p.id)} onFav={onFav}/>)}
+    </div>
+  );
+}
+
+/* ── CD34 ── */
+function CD34Screen(){
+  const [vol,setVol]=useState(""),[cd34mm,setCd34mm]=useState(""),[peso,setPeso]=useState("");
+  const [cd34sp,setCd34sp]=useState(""),[pesoSP,setPesoSP]=useState(""),[ef,setEf]=useState("0.40"),[alvo,setAlvo]=useState("4");
+  const totalBolsa=useMemo(()=>{const v=parseFloat(vol),c=parseFloat(cd34mm);return(v>0&&c>0)?v*1000*c:null;},[vol,cd34mm]);
+  const cd34kg=useMemo(()=>totalBolsa&&parseFloat(peso)>0?totalBolsa/parseFloat(peso):null,[totalBolsa,peso]);
+  const statusBolsa=useMemo(()=>{
+    if(!cd34kg)return null;
+    const v=cd34kg/1e6;
+    if(v>=4)return{label:"✅ Excelente",color:"#34C759",sub:`${v.toFixed(2)} × 10⁶/kg`};
+    if(v>=2)return{label:"⚠️ Aceitável",color:"#FF9500",sub:`${v.toFixed(2)} × 10⁶/kg`};
+    return{label:"❌ Insuficiente",color:"#FF3B30",sub:`${v.toFixed(2)} × 10⁶/kg`};
+  },[cd34kg]);
+  const volProcessar=useMemo(()=>{
+    const c=parseFloat(cd34sp),w=parseFloat(pesoSP),e=parseFloat(ef),a=parseFloat(alvo);
+    return(c>0&&w>0&&e>0&&a>0)?(a*1e6*w)/(c*1e6*e):null;
+  },[cd34sp,pesoSP,ef,alvo]);
+  const inp={border:"none",outline:"none",fontSize:15,textAlign:"right",color:"#007AFF",background:"transparent",fontWeight:600};
+  return(
+    <div style={{padding:"0 16px 40px"}}>
+      <div style={{padding:"16px 0 10px"}}>
+        <div style={{fontSize:22,fontWeight:700,color:"#1C1C1E"}}>Calculadora CD34+</div>
+        <div style={{fontSize:13,color:"#8E8E93"}}>Quantificação e volume a processar</div>
+      </div>
+      <div style={s.lbl}>📦 CD34+ na Bolsa de CPH</div>
+      <div style={s.card}>
+        {[["Volume da bolsa (mL)",vol,setVol,"ex: 200"],
+          ["CD34+ por mm³ (µL)",cd34mm,setCd34mm,"ex: 15"],
+          ["Peso do paciente (kg)",peso,setPeso,"ex: 70"]].map(([lbl,val,set,ph],i,arr)=>(
+          <div key={lbl} style={{...s.row,borderBottom:i<arr.length-1?"1px solid #F2F2F7":"none"}}>
+            <div style={{fontSize:14,color:"#1C1C1E",flex:1}}>{lbl}</div>
+            <input type="number" value={val} onChange={e=>set(e.target.value)} placeholder={ph} style={{...inp,width:100}}/>
+          </div>
+        ))}
+      </div>
+      {totalBolsa&&(
+        <div style={s.card}>
+          <div style={{padding:"12px 16px",borderBottom:"1px solid #F2F2F7"}}>
+            <div style={{fontSize:11,color:"#8E8E93",marginBottom:2}}>Total CD34+</div>
+            <div style={{fontSize:22,fontWeight:700,color:"#1C1C1E"}}>{(totalBolsa/1e6).toFixed(2)} <span style={{fontSize:13,fontWeight:400}}>× 10⁶ células</span></div>
+          </div>
+          {cd34kg&&(
+            <div style={{padding:"12px 16px",borderBottom:statusBolsa?"1px solid #F2F2F7":"none",background:"#007AFF06"}}>
+              <div style={{fontSize:11,color:"#007AFF",marginBottom:2}}>CD34+ por kg</div>
+              <div style={{fontSize:30,fontWeight:700,color:"#007AFF"}}>{(cd34kg/1e6).toFixed(2)} <span style={{fontSize:15,fontWeight:400}}>× 10⁶/kg</span></div>
+            </div>
+          )}
+          {statusBolsa&&(
+            <div style={{padding:"10px 16px",background:statusBolsa.color+"15"}}>
+              <div style={{fontSize:15,fontWeight:700,color:statusBolsa.color}}>{statusBolsa.label}</div>
+              <div style={{fontSize:12,color:"#636366",marginTop:2}}>{statusBolsa.sub}</div>
+            </div>
+          )}
+        </div>
+      )}
+      <div style={{background:"#007AFF12",borderLeft:"3px solid #007AFF",borderRadius:10,padding:"10px 14px",marginBottom:20,fontSize:12,color:"#636366",lineHeight:1.5}}>
+        <b>Metas:</b> Mínimo 2 × 10⁶/kg · Ideal ≥ 4 × 10⁶/kg
+      </div>
+      <div style={s.lbl}>🩸 Volume a Processar na Aférese</div>
+      <div style={s.card}>
+        <div style={{...s.row,borderBottom:"1px solid #F2F2F7"}}>
+          <div style={{fontSize:14,color:"#1C1C1E",flex:1}}>CD34+ no SP (por mm³)</div>
+          <input type="number" value={cd34sp} onChange={e=>setCd34sp(e.target.value)} placeholder="ex: 20" style={{...inp,width:100}}/>
+        </div>
+        <div style={{...s.row,borderBottom:"1px solid #F2F2F7"}}>
+          <div style={{fontSize:14,color:"#1C1C1E",flex:1}}>Peso do paciente (kg)</div>
+          <input type="number" value={pesoSP} onChange={e=>setPesoSP(e.target.value)} placeholder="ex: 70" style={{...inp,width:100}}/>
+        </div>
+        <div style={{...s.row,borderBottom:"1px solid #F2F2F7"}}>
+          <div style={{flex:1}}>
+            <div style={{fontSize:14,color:"#1C1C1E"}}>Alvo CD34+ (× 10⁶/kg)</div>
+            <div style={{display:"flex",gap:6,marginTop:6,flexWrap:"wrap"}}>
+              {[["2","2 (mín)"],["4","4 (ideal)"],["6","6 (duplo)"]].map(([v,lbl])=>(
+                <button key={v} onClick={()=>setAlvo(v)} style={{padding:"3px 10px",borderRadius:8,border:"none",cursor:"pointer",fontSize:11,fontWeight:600,background:alvo===v?"#007AFF":"#F2F2F7",color:alvo===v?"#fff":"#636366"}}>{lbl}</button>
+              ))}
+            </div>
+          </div>
+          <input type="number" value={alvo} onChange={e=>setAlvo(e.target.value)} style={{...inp,width:60}}/>
+        </div>
+        <div style={s.row}>
+          <div style={{flex:1}}>
+            <div style={{fontSize:14,color:"#1C1C1E"}}>Coeficiente de eficiência</div>
+            <div style={{display:"flex",gap:6,marginTop:6}}>
+              {[["0.30","30%"],["0.40","40%"],["0.50","50%"]].map(([v,lbl])=>(
+                <button key={v} onClick={()=>setEf(v)} style={{padding:"3px 10px",borderRadius:8,border:"none",cursor:"pointer",fontSize:11,fontWeight:600,background:ef===v?"#5856D6":"#F2F2F7",color:ef===v?"#fff":"#636366"}}>{lbl}</button>
+              ))}
+            </div>
+          </div>
+          <input type="number" step="0.01" value={ef} onChange={e=>setEf(e.target.value)} style={{...inp,width:60}}/>
+        </div>
+      </div>
+      {volProcessar&&(
+        <div style={{background:"#5856D6",borderRadius:16,padding:"20px",textAlign:"center"}}>
+          <div style={{color:"rgba(255,255,255,0.75)",fontSize:13,marginBottom:4}}>Volume a processar na aférese</div>
+          <div style={{color:"#fff",fontSize:52,fontWeight:700,lineHeight:1}}>{volProcessar.toFixed(1)}<span style={{fontSize:20}}> L</span></div>
+          <div style={{color:"rgba(255,255,255,0.7)",fontSize:13,marginTop:8}}>Alvo {alvo} × 10⁶ CD34+/kg · Eficiência {(parseFloat(ef)*100).toFixed(0)}%</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── AUC Bu ── */
+function BuChart({pts}){
+  if(!pts||pts.length<2)return null;
+  const W=300,H=140,PL=40,PB=24,PT=8,PR=8;
+  const pw=W-PL-PR,ph=H-PT-PB;
+  const maxT=pts[pts.length-1].t,maxC=Math.max(...pts.map(p=>p.c))*1.15;
+  const x=t=>PL+(t/maxT)*pw,y=c=>PT+ph-(c/maxC)*ph;
+  const lp=pts.map((p,i)=>`${i===0?"M":"L"}${x(p.t).toFixed(1)},${y(p.c).toFixed(1)}`).join(" ");
+  const ap=`${lp} L${x(maxT).toFixed(1)},${(PT+ph).toFixed(1)} L${PL},${(PT+ph).toFixed(1)} Z`;
+  return(
+    <div style={{...s.card,padding:"10px 10px 6px",marginBottom:10}}>
+      <div style={s.lbl}>Curva Conc. × Tempo</div>
+      <svg viewBox={`0 0 ${W} ${H}`} style={{width:"100%"}}>
+        {[0,maxC*0.5,maxC].map(c=>(
+          <g key={c}>
+            <line x1={PL} y1={y(c)} x2={W-PR} y2={y(c)} stroke="#F2F2F7" strokeWidth={1}/>
+            <text x={PL-3} y={y(c)+4} textAnchor="end" fontSize={7} fill="#8E8E93">{c.toFixed(c===0?0:2)}</text>
+          </g>
+        ))}
+        <path d={ap} fill="#007AFF15"/>
+        <path d={lp} fill="none" stroke="#007AFF" strokeWidth={2} strokeLinejoin="round"/>
+        {pts.map((p,i)=><circle key={i} cx={x(p.t)} cy={y(p.c)} r={3} fill="#007AFF" stroke="#fff" strokeWidth={1}/>)}
+        {pts.map((p,i)=>(i===0||i===pts.length-1||i%3===0)?<text key={i} x={x(p.t)} y={H-PB+11} textAnchor="middle" fontSize={7} fill="#8E8E93">{p.t}</text>:null)}
+      </svg>
+    </div>
+  );
+}
+
+function BuAUCScreen(){
+  const MODES={
+    iv_cond:{label:"IV — Condicionamento (Adulto)",times:[0,30,60,120,180,240,300,360,480]},
+    iv_test:{label:"IV — Dose Teste (Adulto)",     times:[0,30,45,60,120,180,240,300,360,480]},
+    iv_child:{label:"IV — Criança",                times:[0,60,120,180,240,300,360,420,480]},
+    vo:      {label:"VO — Adulto/Criança",          times:[0,30,60,90,120,180,240,300,360]},
+  };
+  const [mode,setMode]=useState("iv_cond");
+  const [dose,setDose]=useState(""),[weight,setWeight]=useState("");
+  const [tgt,setTgt]=useState(""),[tgtU,setTgtU]=useState("umol");
+  const [concs,setConcs]=useState({});
+  const [res,setRes]=useState(null),[loading,setLoading]=useState(false),[err,setErr]=useState("");
+  const times=MODES[mode].times;
+  const parseText=txt=>{
+    const labels={0:"BASAL",30:"30",45:"45",60:"60",90:"90",120:"120",180:"180",240:"240",300:"300",360:"360",420:"420",480:"480"};
+    const nc={};
+    Object.entries(labels).forEach(([t,lbl])=>{
+      const str=lbl==="BASAL"?"BASAL":`${lbl} MINUTOS`;
+      const re=new RegExp(`BUSSULFANO\\s+${str}\\s+([\\d,\\.]+|Inf\\.?[\\d,]*|N.ocoletado)`,"i");
+      const m=txt.match(re);
+      if(m){const v=m[1].replace(",",".");nc[+t]=/n.o/i.test(v)?null:/inf/i.test(v)?0.025:parseFloat(v);}
+    });
+    const dm=txt.match(/DOSE DE BUSSULFANO\s+([\d,\.]+)/i);
+    if(dm)setDose(dm[1].replace(",","."));
+    const im=txt.match(/TEMPO DE INFUS[ÃA]O\s+(\d+)/i);
+    if(im)setMode(parseInt(im[1])<=60?"iv_test":"iv_cond");
+    setConcs(nc);
+  };
+  const handlePDF=async file=>{
+    setLoading(true);setErr("");setRes(null);
+    try{
+      if(!window.pdfjsLib){setErr("PDF.js não carregado.");setLoading(false);return;}
+      const buf=await file.arrayBuffer();
+      const pdf=await window.pdfjsLib.getDocument({data:buf}).promise;
+      let txt="";
+      for(let i=1;i<=pdf.numPages;i++){const pg=await pdf.getPage(i);const tc=await pg.getTextContent();txt+=tc.items.map(x=>x.str).join(" ")+"\n";}
+      parseText(txt);
+    }catch(e){setErr("Não foi possível ler o PDF.");}
+    setLoading(false);
+  };
+  const calcAUC=()=>{
+    setRes(null);setErr("");
+    const pts=times.map(t=>({t,c:concs[t]})).filter(p=>p.c!=null&&!isNaN(p.c)&&p.c>0);
+    if(pts.length<3){setErr("Mínimo 3 pontos válidos.");return;}
+    let auc=0;
+    for(let i=0;i<pts.length-1;i++){
+      const dt=pts[i+1].t-pts[i].t,c1=pts[i].c,c2=pts[i+1].c;
+      auc+=(c1>0&&c2>0&&c1!==c2&&c2<c1)?dt*(c1-c2)/Math.log(c1/c2):dt*(c1+c2)/2;
+    }
+    const tail=pts.slice(-Math.min(4,pts.length));
+    let lam=null,t12=null,ext=0;
+    if(tail.length>=2){
+      const n=tail.length,ts=tail.map(p=>p.t),lnC=tail.map(p=>Math.log(p.c));
+      const mT=ts.reduce((a,b)=>a+b)/n,mL=lnC.reduce((a,b)=>a+b)/n;
+      const sl=ts.reduce((s,t,i)=>s+(t-mT)*(lnC[i]-mL),0)/ts.reduce((s,t)=>s+(t-mT)**2,0);
+      if(sl<0){lam=-sl;t12=Math.log(2)/lam;ext=pts[pts.length-1].c/lam;}
+    }
+    const aucInf=auc+(lam>0?ext:0);
+    const toU=a=>a*1000/246.3,toN=a=>a*1000/60;
+    const aucInfU=toU(aucInf);
+    const dN=parseFloat(dose),tgtV=parseFloat(tgt),wN=parseFloat(weight);
+    const tgtUmol=tgtU==="umol"?tgtV:tgtV*246.3*60/1000000;
+    let newDose=null,ndKg=null;
+    if(dN>0&&tgtUmol>0&&aucInfU>0){newDose=dN*(tgtUmol/aucInfU);if(wN>0)ndKg=newDose/wN;}
+    setRes({pts,aucObsU:toU(auc),aucInfU,aucObsN:toN(auc),aucInfN:toN(aucInf),t12,newDose,ndKg});
+  };
+  return(
+    <div style={{padding:"0 16px 40px"}}>
+      <div style={{padding:"16px 0 10px"}}>
+        <div style={{fontSize:22,fontWeight:700,color:"#1C1C1E"}}>AUC Bussulfano</div>
+        <div style={{fontSize:13,color:"#8E8E93"}}>Linear-log trapezoidal</div>
+      </div>
+      <div style={s.lbl}>Importar PDF do laudo (HIAE)</div>
+      <label style={{...s.card,display:"flex",flexDirection:"column",alignItems:"center",padding:"16px",cursor:"pointer",border:"2px dashed #007AFF33",background:"#007AFF06",marginBottom:10}}>
+        <div style={{fontSize:28,marginBottom:4}}>{loading?"⏳":"📄"}</div>
+        <div style={{fontSize:14,fontWeight:600,color:"#007AFF"}}>{loading?"Lendo PDF...":"Selecionar PDF do laudo"}</div>
+        <div style={{fontSize:12,color:"#8E8E93",marginTop:2}}>Preenche campos automaticamente</div>
+        <input type="file" accept=".pdf,application/pdf" style={{display:"none"}} onChange={e=>e.target.files[0]&&handlePDF(e.target.files[0])} disabled={loading}/>
+      </label>
+      <div style={s.lbl}>Via / Esquema</div>
+      <div style={s.card}>
+        {Object.entries(MODES).map(([k,v],i,arr)=>(
+          <div key={k} onClick={()=>{setMode(k);setConcs({});setRes(null);}}
+            style={{...s.row,borderBottom:i<arr.length-1?"1px solid #F2F2F7":"none",cursor:"pointer",background:mode===k?"#007AFF06":"transparent"}}>
+            <div style={{flex:1,fontSize:13,color:"#1C1C1E"}}>{v.label}</div>
+            {mode===k&&<span style={{color:"#007AFF",fontWeight:700}}>✓</span>}
+          </div>
+        ))}
+      </div>
+      <div style={s.lbl}>Dados do Paciente</div>
+      <div style={s.card}>
+        {[["Dose administrada (mg)",dose,setDose,"ex: 60"],["Peso (kg)",weight,setWeight,"ex: 70"]].map(([lbl,val,set,ph],i,arr)=>(
+          <div key={lbl} style={{...s.row,borderBottom:i<arr.length-1?"1px solid #F2F2F7":"none"}}>
+            <div style={{fontSize:14,color:"#1C1C1E",flex:1}}>{lbl}</div>
+            <input type="number" value={val} onChange={e=>set(e.target.value)} placeholder={ph} style={{width:90,border:"none",outline:"none",fontSize:15,textAlign:"right",color:"#007AFF",background:"transparent",fontWeight:600}}/>
+          </div>
+        ))}
+      </div>
+      <div style={s.lbl}>Concentrações (µg/mL)</div>
+      <div style={s.card}>
+        {times.map((t,i)=>(
+          <div key={t} style={{display:"flex",alignItems:"center",padding:"8px 14px",borderBottom:i<times.length-1?"1px solid #F2F2F7":"none",gap:10}}>
+            <div style={{width:52,fontSize:12,fontWeight:700,color:t===0?"#636366":concs[t]>0?"#007AFF":"#C7C7CC"}}>{t===0?"Basal":t+"min"}</div>
+            {concs[t]===null
+              ?<span style={{flex:1,fontSize:12,color:"#8E8E93",fontStyle:"italic"}}>Não coletado</span>
+              :<input type="number" step="0.01" value={concs[t]===undefined?"":concs[t]}
+                onChange={e=>{setConcs(prev=>({...prev,[t]:e.target.value===""?undefined:parseFloat(e.target.value)}));setRes(null);}}
+                placeholder="—" style={{flex:1,border:"none",outline:"none",fontSize:14,color:concs[t]>0?"#1C1C1E":"#8E8E93",background:"transparent"}}/>
+            }
+            <button onClick={()=>{setConcs(prev=>({...prev,[t]:prev[t]===null?undefined:null}));setRes(null);}}
+              style={{background:"none",border:"none",fontSize:14,cursor:"pointer",color:concs[t]===null?"#007AFF":"#C7C7CC"}}>
+              {concs[t]===null?"↩":"✕"}
+            </button>
+          </div>
+        ))}
+      </div>
+      <div style={s.lbl}>AUC Alvo</div>
+      <div style={s.card}>
+        <div style={{...s.row,borderBottom:"1px solid #F2F2F7"}}>
+          <div style={{fontSize:14,color:"#1C1C1E",flex:1}}>Unidade</div>
+          <div style={{display:"flex",gap:6}}>
+            {[["umol","µmol·min/L"],["ngh","ng·h/mL"]].map(([k,lbl])=>(
+              <button key={k} onClick={()=>setTgtU(k)} style={{padding:"4px 8px",borderRadius:8,border:"none",cursor:"pointer",fontSize:11,fontWeight:600,background:tgtU===k?"#007AFF":"#F2F2F7",color:tgtU===k?"#fff":"#636366"}}>{lbl}</button>
+            ))}
+          </div>
+        </div>
+        <div style={s.row}>
+          <div style={{fontSize:14,color:"#1C1C1E",flex:1}}>Valor alvo</div>
+          <input type="number" value={tgt} onChange={e=>setTgt(e.target.value)} placeholder="ex: 1125" style={{width:90,border:"none",outline:"none",fontSize:15,textAlign:"right",color:"#007AFF",background:"transparent",fontWeight:600}}/>
+        </div>
+        <div style={{padding:"6px 14px 10px",display:"flex",gap:6,flexWrap:"wrap"}}>
+          {[["900","900 (RIC)"],["1125","1125 (MAC)"],["1350","1350 (máx)"]].map(([v,lbl])=>(
+            <button key={v} onClick={()=>{setTgt(v);setTgtU("umol");}} style={{padding:"4px 10px",borderRadius:8,border:"1px solid #E5E5EA",cursor:"pointer",fontSize:11,color:"#007AFF",background:"#fff"}}>{lbl}</button>
+          ))}
+        </div>
+      </div>
+      {err&&<div style={{background:"#FF3B3012",borderLeft:"3px solid #FF3B30",borderRadius:10,padding:"10px 14px",marginBottom:10,fontSize:13,color:"#FF3B30"}}>{err}</div>}
+      <button onClick={calcAUC} style={{width:"100%",background:"#007AFF",color:"#fff",border:"none",borderRadius:14,padding:"14px",fontSize:16,fontWeight:700,cursor:"pointer",marginBottom:14}}>Calcular AUC</button>
+      {res&&(
+        <div>
+          <BuChart pts={res.pts}/>
+          <div style={s.card}>
+            <div style={{padding:"12px 16px",borderBottom:"1px solid #F2F2F7"}}>
+              <div style={{fontSize:11,color:"#8E8E93",marginBottom:2}}>AUC observada</div>
+              <div style={{fontSize:20,fontWeight:700,color:"#1C1C1E"}}>{res.aucObsU.toFixed(0)} <span style={{fontSize:12,fontWeight:400}}>µmol·min/L</span></div>
+              <div style={{fontSize:12,color:"#8E8E93"}}>{res.aucObsN.toFixed(0)} ng·h/mL</div>
+            </div>
+            <div style={{padding:"12px 16px",borderBottom:res.t12?"1px solid #F2F2F7":"none",background:"#007AFF06"}}>
+              <div style={{fontSize:11,color:"#007AFF",marginBottom:2}}>AUC extrapolada (0→∞)</div>
+              <div style={{fontSize:28,fontWeight:700,color:"#007AFF"}}>{res.aucInfU.toFixed(0)} <span style={{fontSize:14,fontWeight:400}}>µmol·min/L</span></div>
+              <div style={{fontSize:12,color:"#8E8E93"}}>{res.aucInfN.toFixed(0)} ng·h/mL</div>
+            </div>
+            {res.t12&&<div style={s.row}><div style={{flex:1,fontSize:14,color:"#1C1C1E"}}>Meia-vida</div><div style={{fontSize:14,fontWeight:600,color:"#5856D6"}}>{(res.t12/60).toFixed(1)}h</div></div>}
+          </div>
+          {res.newDose&&(
+            <div style={{background:"#34C759",borderRadius:16,padding:"18px",textAlign:"center",marginTop:4}}>
+              <div style={{color:"rgba(255,255,255,0.8)",fontSize:12,marginBottom:4}}>Nova dose sugerida</div>
+              <div style={{color:"#fff",fontSize:44,fontWeight:700,lineHeight:1}}>{res.newDose.toFixed(0)}<span style={{fontSize:18}}> mg</span></div>
+              {res.ndKg&&<div style={{color:"rgba(255,255,255,0.85)",fontSize:16,marginTop:3}}>{res.ndKg.toFixed(3)} mg/kg</div>}
+            </div>
+          )}
+          <div style={{background:"#FF950015",borderLeft:"3px solid #FF9500",borderRadius:10,padding:"10px 14px",marginTop:10,fontSize:12,color:"#636366",lineHeight:1.5}}>
+            ⚠️ Ferramenta auxiliar. Ajuste de dose deve ser validado pelo médico assistente.
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── eGVHD ── */
+function EGVHDScreen(){
+  const [loaded,setLoaded]=useState(false);
+  const [err,setErr]=useState(false);
+  return(
+    <div style={{display:"flex",flexDirection:"column",height:"100%"}}>
+      {!loaded&&!err&&(
+        <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:10,padding:24}}>
+          <div style={{fontSize:32}}>⏳</div>
+          <div style={{fontSize:14,color:"#8E8E93"}}>Carregando calculadora eGVHD...</div>
+        </div>
+      )}
+      {err&&(
+        <div style={{flex:1,overflowY:"auto",padding:"0 16px 24px"}}>
+          <div style={{padding:"16px 0 10px"}}>
+            <div style={{fontSize:22,fontWeight:700,color:"#1C1C1E"}}>📊 Calculadora DECH</div>
+            <div style={{fontSize:13,color:"#8E8E93"}}>eGVHD — UZ Leuven v1.1.1</div>
+          </div>
+          <div style={{...s.card,padding:"20px",textAlign:"center",marginBottom:12}}>
+            <div style={{fontSize:40,marginBottom:10}}>🔒</div>
+            <div style={{fontSize:15,fontWeight:600,color:"#1C1C1E",marginBottom:6}}>Site não permite incorporação</div>
+            <a href="https://files.uzleuven.be/eGVHD/v1.1.1/index.html#/app/home" target="_blank" rel="noreferrer"
+              style={{background:"#007AFF",color:"#fff",borderRadius:12,padding:"12px 24px",fontSize:15,fontWeight:700,textDecoration:"none",display:"inline-block"}}>
+              🔗 Abrir no Safari
+            </a>
+          </div>
+        </div>
+      )}
+      <iframe src="https://files.uzleuven.be/eGVHD/v1.1.1/index.html#/app/home"
+        style={{flex:1,border:"none",display:loaded&&!err?"block":"none"}}
+        onLoad={()=>setLoaded(true)}
+        onError={()=>{setLoaded(false);setErr(true);}}
+        title="eGVHD Calculator"/>
+    </div>
+  );
+}
+
+/* ── CALC SCREEN ── */
+function CalcScreen(){
+  const [tab,setTab]=useState("doses");
+  const [drug,setDrug]=useState(null);
+  const [kg,setKg]=useState(""),[ht,setHt]=useState("");
+  const bsa=useMemo(()=>{const w=parseFloat(kg),h=parseFloat(ht);return(w>0&&h>0)?Math.sqrt((w*h)/3600).toFixed(2):null;},[kg,ht]);
+  const val=drug?.inp==="bsa"?parseFloat(bsa):parseFloat(kg);
+  const res=drug&&val>0?drug.calc(val):null;
+  const groups=[...new Set(DRUGS.map(d=>d.group))];
+
+  const Tabs=()=>(
+    <div style={{display:"flex",gap:6,padding:"12px 16px 0",background:"#F2F2F7"}}>
+      {[["doses","💊 Doses"],["dech","🧬 DECH"],["auc","📊 AUC Bu"],["cd34","🔵 CD34"]].map(([k,lbl])=>(
+        <button key={k} onClick={()=>setTab(k)} style={{flex:1,padding:"9px 4px",borderRadius:12,border:"none",cursor:"pointer",fontSize:12,fontWeight:700,
+          background:tab===k?"#007AFF":"#fff",color:tab===k?"#fff":"#636366",boxShadow:"0 1px 3px rgba(0,0,0,0.08)"}}>
+          {lbl}
+        </button>
+      ))}
+    </div>
+  );
+
+  if(tab==="dech") return(<div style={{height:"100%",display:"flex",flexDirection:"column"}}><Tabs/><div style={{flex:1,overflow:"hidden"}}><EGVHDScreen/></div></div>);
+  if(tab==="auc")  return(<div style={{height:"100%",display:"flex",flexDirection:"column"}}><Tabs/><div style={{flex:1,overflowY:"auto",background:"#F2F2F7"}}><BuAUCScreen/></div></div>);
+  if(tab==="cd34") return(<div style={{height:"100%",display:"flex",flexDirection:"column"}}><Tabs/><div style={{flex:1,overflowY:"auto",background:"#F2F2F7"}}><CD34Screen/></div></div>);
+
+  return(
+    <div style={{height:"100%",display:"flex",flexDirection:"column"}}>
+      <Tabs/>
+      <div style={{flex:1,overflowY:"auto",background:"#F2F2F7"}}>
+        <div style={{padding:"0 16px 32px"}}>
+          <div style={{padding:"14px 0 10px"}}>
+            <div style={{fontSize:24,fontWeight:700,color:"#1C1C1E"}}>Calculadora de Doses</div>
+            <div style={{fontSize:13,color:"#8E8E93"}}>Por peso / superfície corporal</div>
+          </div>
+          <div style={s.lbl}>Dados do Paciente</div>
+          <div style={s.card}>
+            <div style={{...s.row,borderBottom:"1px solid #F2F2F7"}}>
+              <div style={{fontSize:15,color:"#1C1C1E",width:110}}>Peso (kg)</div>
+              <input type="number" value={kg} onChange={e=>setKg(e.target.value)} placeholder="ex: 70"
+                style={{flex:1,border:"none",outline:"none",fontSize:16,textAlign:"right",color:"#007AFF",background:"transparent",fontWeight:600}}/>
+            </div>
+            <div style={s.row}>
+              <div style={{fontSize:15,color:"#1C1C1E",width:110}}>Altura (cm)</div>
+              <input type="number" value={ht} onChange={e=>setHt(e.target.value)} placeholder="ex: 170"
+                style={{flex:1,border:"none",outline:"none",fontSize:16,textAlign:"right",color:"#007AFF",background:"transparent",fontWeight:600}}/>
+            </div>
+          </div>
+          {bsa&&<div style={{textAlign:"center",color:"#5856D6",fontSize:13,fontWeight:600,marginBottom:10,marginTop:-4}}>SC (Mosteller): {bsa} m²</div>}
+          {res&&(
+            <div style={{background:"#007AFF",borderRadius:18,padding:"20px",textAlign:"center",marginBottom:16}}>
+              <div style={{color:"rgba(255,255,255,0.7)",fontSize:12}}>{drug.name}</div>
+              <div style={{color:"rgba(255,255,255,0.85)",fontSize:13,marginBottom:8}}>{drug.sub}</div>
+              <div style={{color:"#fff",fontSize:44,fontWeight:700,lineHeight:1,marginBottom:2}}>{res.dose}</div>
+              <div style={{color:"rgba(255,255,255,0.9)",fontSize:15,marginBottom:10}}>{res.unit}</div>
+              <div style={{background:"rgba(255,255,255,0.2)",borderRadius:10,padding:"5px 14px",display:"inline-block",marginBottom:8}}>
+                <span style={{color:"#fff",fontSize:13,fontWeight:600}}>{drug.freq}</span>
+              </div>
+              <div style={{color:"rgba(255,255,255,0.5)",fontSize:10,marginTop:2}}>{drug.inp==="bsa"?`SC: ${bsa} m²`:`Peso: ${kg} kg`} · {drug.formula}</div>
+            </div>
+          )}
+          {res&&drug.mesna&&(()=>{
+            const cyDose=parseFloat(res.dose);
+            const mPart=(cyDose/4).toFixed(0);
+            return(
+              <div style={{background:"#FF950015",borderLeft:"3px solid #FF9500",borderRadius:14,padding:"14px 16px",marginBottom:16,marginTop:-10}}>
+                <div style={{fontSize:12,fontWeight:700,color:"#FF9500",marginBottom:8,textTransform:"uppercase",letterSpacing:0.5}}>💊 MESNA — mesma dose da Ciclofosfamida</div>
+                <div style={{fontSize:13,color:"#1C1C1E",marginBottom:8,fontWeight:600}}>Dose total MESNA: {cyDose} mg</div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+                  {[["0h","logo antes"],["2h","após início"],["4h","após início"],["8h","após início"]].map(([t,sub])=>(
+                    <div key={t} style={{background:"#fff",borderRadius:10,padding:"8px 12px",boxShadow:"0 1px 3px rgba(0,0,0,0.06)"}}>
+                      <div style={{fontSize:12,fontWeight:700,color:"#FF9500"}}>{t}</div>
+                      <div style={{fontSize:18,fontWeight:700,color:"#1C1C1E",lineHeight:1.2}}>{mPart} <span style={{fontSize:11,fontWeight:400}}>mg</span></div>
+                      <div style={{fontSize:10,color:"#8E8E93"}}>{sub}</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{fontSize:11,color:"#8E8E93",marginTop:8,lineHeight:1.4}}>IV em 15–30 min · Diluir em SF 0,9%</div>
+              </div>
+            );
+          })()}
+          {groups.map(g=>(
+            <div key={g}>
+              <div style={s.lbl}>{g}</div>
+              <div style={s.card}>
+                {DRUGS.filter(d=>d.group===g).map((d,i,arr)=>(
+                  <div key={d.id} onClick={()=>setDrug(drug?.id===d.id?null:d)}
+                    style={{...s.row,borderBottom:i<arr.length-1?"1px solid #F2F2F7":"none",cursor:"pointer",background:drug?.id===d.id?"#007AFF08":"transparent"}}>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:14,fontWeight:600,color:"#1C1C1E"}}>{d.name}</div>
+                      <div style={{fontSize:11,color:"#8E8E93",marginTop:1}}>{d.sub}</div>
+                    </div>
+                    <div style={{width:20,height:20,borderRadius:10,flexShrink:0,border:drug?.id===d.id?"none":"2px solid #C7C7CC",background:drug?.id===d.id?"#007AFF":"transparent",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                      {drug?.id===d.id&&<div style={{width:7,height:7,borderRadius:4,background:"#fff"}}/>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FavsScreen({favs,onSel,onFav}){
+  const list=DATA.filter(p=>favs.has(p.id));
+  return(
+    <div style={{padding:"0 16px"}}>
+      <div style={{padding:"20px 0 10px"}}><div style={{fontSize:28,fontWeight:700,color:"#1C1C1E"}}>Favoritos</div></div>
+      {list.length===0
+        ?<div style={{textAlign:"center",padding:"60px 20px"}}>
+          <div style={{fontSize:48,marginBottom:12}}>☆</div>
+          <div style={{fontSize:17,fontWeight:600,color:"#1C1C1E",marginBottom:6}}>Sem favoritos ainda</div>
+          <div style={{fontSize:14,color:"#8E8E93"}}>Toque na estrela em qualquer protocolo para salvar aqui</div>
+        </div>
+        :list.map(p=><ProtCard key={p.id} p={p} onSel={onSel} fav={true} onFav={onFav}/>)}
+    </div>
+  );
+}
+
+function ManualScreen({initialSel}){
+  const [sel,setSel]=useState(initialSel||null);
+  if(sel) return(
+    <div style={s.page}>
+      <div style={{background:"#fff",padding:"12px 16px 12px",position:"sticky",top:0,zIndex:10,borderBottom:"1px solid #E5E5EA"}}>
+        <button onClick={()=>setSel(null)} style={{background:"none",border:"none",color:"#007AFF",fontSize:16,cursor:"pointer",display:"flex",alignItems:"center",gap:3,marginBottom:4}}>‹ Voltar</button>
+        <div style={{fontSize:19,fontWeight:700,color:"#1C1C1E"}}>{sel.icon} {sel.title}</div>
+      </div>
+      <div style={{padding:"14px 16px 32px"}}>{sel.sections.map((sec,i)=><ContentSection key={i} sec={sec}/>)}</div>
+    </div>
+  );
+  return(
+    <div style={{padding:"0 16px"}}>
+      <div style={{padding:"20px 0 10px"}}>
+        <div style={{fontSize:28,fontWeight:700,color:"#1C1C1E"}}>Manual</div>
+        <div style={{fontSize:14,color:"#8E8E93"}}>Residente de TMO — UNIFESP 2026</div>
+      </div>
+      <div style={s.card}>
+        {MANUAL.map((m,i)=>(
+          <div key={m.id} onClick={()=>setSel(m)}
+            style={{...s.row,borderBottom:i<MANUAL.length-1?"1px solid #F2F2F7":"none",cursor:"pointer"}}>
+            <div style={{width:40,height:40,borderRadius:10,background:"#63636615",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>{m.icon}</div>
+            <div style={{flex:1,fontSize:15,fontWeight:600,color:"#1C1C1E"}}>{m.title}</div>
+            <span style={{color:"#C7C7CC",fontSize:18}}>›</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TabBar({tab,setTab}){
+  const tabs=[
+    {id:"home",     label:"Início",    icon:"🏠"},
+    {id:"protocols",label:"Protocolos",icon:"📋"},
+    {id:"calc",     label:"Calc.",     icon:"💊"},
+    {id:"favs",     label:"Favoritos", icon:"★"},
+    {id:"manual",   label:"Manual",    icon:"📖"},
+  ];
+  return(
+    <div style={{background:"#fff",borderTop:"1px solid #E5E5EA",display:"flex",flexShrink:0}}>
+      {tabs.map(t=>(
+        <button key={t.id} onClick={()=>setTab(t.id)} style={{flex:1,background:"none",border:"none",cursor:"pointer",padding:"9px 0 7px",display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
+          <span style={{fontSize:20,lineHeight:1}}>{t.icon}</span>
+          <span style={{fontSize:9,fontWeight:600,color:tab===t.id?"#007AFF":"#8E8E93"}}>{t.label}</span>
+          {tab===t.id&&<div style={{width:4,height:3,borderRadius:2,background:"#007AFF"}}/>}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/* ═══════ APP ROOT ═══════ */
+function App(){
+  const [tab,setTab]=useState("home");
+  const [sel,setSel]=useState(null);
+  const [favs,setFavs]=useState(new Set(["protocolo-enfermaria","cmv","dech-profilaxia"]));
+  const [manualInitial,setManualInitial]=useState(null);
+  const onFav=id=>setFavs(prev=>{const n=new Set(prev);n.has(id)?n.delete(id):n.add(id);return n;});
+  const onOpenManual=(item)=>{setManualInitial(item);setTab("manual");};
+  const topPad="env(safe-area-inset-top,16px)";
+  const botPad="env(safe-area-inset-bottom,0px)";
+
+  if(sel) return(
+    <div style={{height:"100dvh",display:"flex",flexDirection:"column",background:"#fff"}}>
+      <div style={{height:topPad,background:"#F2F2F7",flexShrink:0}}/>
+      <div style={{flex:1,overflowY:"auto",background:"#F2F2F7"}}>
+        <DetailScreen p={sel} onBack={()=>setSel(null)} fav={favs.has(sel.id)} onFav={()=>onFav(sel.id)}/>
+      </div>
+      <div style={{height:botPad,background:"#fff",flexShrink:0}}/>
+    </div>
+  );
+
+  return(
+    <div style={{height:"100dvh",display:"flex",flexDirection:"column",background:"#fff"}}>
+      <div style={{height:topPad,background:"#F2F2F7",flexShrink:0}}/>
+      <div style={{flex:1,overflow:"hidden",display:"flex",flexDirection:"column"}}>
+        {tab==="home"      &&<div style={{...s.page,height:"100%",overflowY:"auto"}}><HomeScreen onSel={setSel} favs={favs} onFav={onFav} onOpenManual={onOpenManual}/></div>}
+        {tab==="protocols" &&<div style={{...s.page,height:"100%",overflowY:"auto"}}><ProtocolsScreen onSel={setSel} favs={favs} onFav={onFav}/></div>}
+        {tab==="calc"      &&<div style={{height:"100%",display:"flex",flexDirection:"column"}}><CalcScreen/></div>}
+        {tab==="favs"      &&<div style={{...s.page,height:"100%",overflowY:"auto"}}><FavsScreen favs={favs} onSel={setSel} onFav={onFav}/></div>}
+        {tab==="manual"    &&<div style={{...s.page,height:"100%",overflowY:"auto"}}><ManualScreen initialSel={manualInitial}/></div>}
+      </div>
+      <TabBar tab={tab} setTab={setTab}/>
+      <div style={{height:botPad,background:"#fff",flexShrink:0}}/>
+    </div>
+  );
+}
+
+ReactDOM.render(<App/>,document.getElementById('root'));
+</script>
+</body>
+</html>
